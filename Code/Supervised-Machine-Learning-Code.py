@@ -1,14 +1,18 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: July 29, 2025
+# Date: July 30, 2025
 
 # Load to import, clean, and wrangle data
+import os
 import polars as pl
 from sklearn.datasets import load_breast_cancer
 
 # Load to train, test, and evaluate machine learning models
 from sklearn.model_selection import train_test_split
 from sklearn.svm import LinearSVC
+
+# Set the working directory
+os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
 
 # Part 1: Machine Learning Workflow
 
@@ -19,6 +23,37 @@ bc_x_train, bc_x_test, bc_y_train, bc_y_test = train_test_split(
     random_state = 417
     )
 
-bc_model = LinearSVC(penalty = "l2", loss = "hinge", C = 10, random_state = 417)
-bc_model.fit(bc_x_train, bc_y_train)
-bc_model.score(bc_x_test, bc_y_test)
+bc_model_1 = LinearSVC(penalty = "l2", loss = "hinge", C = 10, 
+                       random_state = 417)
+bc_model_1.fit(bc_x_train, bc_y_train)
+bc_model_1.score(bc_x_test, bc_y_test)
+
+bc_model_2 = LinearSVC(penalty = "l2", loss = "squared_hinge", C = 10, 
+                       max_iter = 3_500, random_state = 417)
+bc_model_2.fit(bc_x_train, bc_y_train)
+bc_model_2.score(bc_x_test, bc_y_test)
+
+# Part 2: K-Nearest Neighbors
+
+sp = (
+    pl.read_parquet("Subscription-Prediction.parquet")
+      .with_row_index("index")
+      .with_columns(
+          pl.when(pl.col("y") == 1)
+            .then(1)
+            .otherwise(0)
+            .alias("y")
+          )
+    )
+
+sp_train = sp.sample(fraction = 0.85, seed = 417)
+sp_test = (
+    sp.filter(~pl.col("index").is_in(sp_train.select(pl.col("index"))))
+      .drop("index")
+    ) 
+sp_train = sp_train.drop("index")
+
+sp_x_train = sp_train.drop("y") 
+sp_y_train = sp_train.select("y").to_series()
+sp_x_test = sp_test.drop("y")
+sp_y_test = sp_test.select("y").to_series()
