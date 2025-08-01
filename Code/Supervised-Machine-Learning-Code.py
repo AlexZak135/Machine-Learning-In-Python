@@ -1,17 +1,14 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: July 30, 2025
+# Date: July 31, 2025
 
-# Load to import, clean, and wrangle data
 import os
 import polars as pl
 from sklearn.datasets import load_breast_cancer
 
-# Load to train, test, and evaluate machine learning models
 from sklearn.model_selection import train_test_split
 from sklearn.svm import LinearSVC
 
-# Set the working directory
 os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
 
 # Part 1: Machine Learning Workflow
@@ -39,12 +36,13 @@ sp = (
     pl.read_parquet("Subscription-Prediction.parquet")
       .with_row_index("index")
       .with_columns(
-          pl.when(pl.col("y") == 1)
+          pl.when(pl.col("y") == "yes")
             .then(1)
             .otherwise(0)
             .alias("y")
           )
     )
+sp.group_by("y").len()
 
 sp_train = sp.sample(fraction = 0.85, seed = 417)
 sp_test = (
@@ -53,7 +51,7 @@ sp_test = (
     ) 
 sp_train = sp_train.drop("index")
 
-sp_x_train = sp_train.drop("y") 
-sp_y_train = sp_train.select("y").to_series()
+sp_x_train = sp_train.drop("y")
 sp_x_test = sp_test.drop("y")
+sp_y_train = sp_train.select("y").to_series()
 sp_y_test = sp_test.select("y").to_series()
