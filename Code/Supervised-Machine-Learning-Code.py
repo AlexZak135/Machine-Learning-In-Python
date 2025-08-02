@@ -55,4 +55,3 @@ sp_x_train = sp_train.drop("y")
 sp_x_test = sp_test.drop("y")
 sp_y_train = sp_train.select("y").to_series()
 sp_y_test = sp_test.select("y").to_series()
-
