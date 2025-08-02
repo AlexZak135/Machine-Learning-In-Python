@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: August 1, 2025
+# Date: August 2, 2025
 
 import os
 import polars as pl
@@ -55,3 +55,21 @@ sp_x_train = sp_train.drop("y")
 sp_x_test = sp_test.drop("y")
 sp_y_train = sp_train.select("y").to_series()
 sp_y_test = sp_test.select("y").to_series()
+
+def knn(df_x_train, feature, single_test_input, k, df_y_train):
+    df_x_train = df_x_train.with_columns(
+        (pl.col(feature) - single_test_input[feature]).abs().alias("distance")
+        )
+    
+    indices = (
+        df_x_train.with_row_index("index").sort("distance").head(k)["index"]
+                  .to_list()
+        )
+    
+    prediction = pl.Series(df_y_train[indices]).mode()[0]
+    
+    return prediction
+
+print(f"Prediction: {knn(sp_x_train, "age", sp_x_test.row(108, named = True), 3, 
+                     sp_y_train)}")
+print(f"Actual: {sp_y_test[108]}")
