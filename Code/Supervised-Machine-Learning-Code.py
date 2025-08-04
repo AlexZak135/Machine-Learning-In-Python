@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: August 2, 2025
+# Date: August 3, 2025
 
 import os
 import polars as pl
@@ -34,7 +34,9 @@ bc_model_2.score(bc_x_test, bc_y_test)
 
 sp = (
     pl.read_parquet("Subscription-Prediction.parquet")
+      .filter(pl.col("marital") != "unknown")
       .with_row_index("index")
+      .to_dummies(columns = "marital")
       .with_columns(
           pl.when(pl.col("y") == "yes")
             .then(1)
@@ -66,10 +68,80 @@ def knn(df_x_train, feature, single_test_input, k, df_y_train):
                   .to_list()
         )
     
-    prediction = pl.Series(df_y_train[indices]).mode()[0]
+    prediction = pl.Series(sorted(df_y_train[indices])).mode()[0]
     
     return prediction
 
-print(f"Prediction: {knn(sp_x_train, "age", sp_x_test.row(108, named = True), 3, 
+print(f"Prediction: {knn(sp_x_train, "age", sp_x_test.row(215, named = True), 3, 
                      sp_y_train)}")
-print(f"Actual: {sp_y_test[108]}")
+print(f"Actual: {sp_y_test[215]}")
+
+sp_x_test = sp_x_test.with_columns(
+    pl.Series("age_predicted_y", [knn(sp_x_train, "age", row, 3, sp_y_train) 
+                                  for row in sp_x_test.iter_rows(named = True)])
+    )
+sp_x_test = sp_x_test.with_columns(
+    pl.Series("campaign_predicted_y", 
+              [knn(sp_x_train, "campaign", row, 3, sp_y_train) 
+               for row in sp_x_test.iter_rows(named = True)])
+    )
+
+print(f"Accuracy: {round(sp_x_test.select(
+    ((pl.col("age_predicted_y") == pl.Series(sp_y_test)).mean() * 100)
+        .alias("accuracy")
+    ).item(), 2)}%")
+print(f"Accuracy: {round(sp_x_test.select(
+    ((pl.col("campaign_predicted_y") == pl.Series(sp_y_test)).mean() * 100)
+        .alias("accuracy")
+    ).item(), 2)}%")
+
+def knn(df_x_train, features, single_test_input, k, df_y_train):
+    df_x_train = (
+        df_x_train.with_columns([
+            (pl.col(feature) - single_test_input[feature]) ** 2 
+            for feature in features
+            ])    
+                  .with_columns(
+            pl.sum_horizontal([pl.col(feature) for feature in features]).sqrt()
+              .alias("distance")
+            )
+        )
+    
+    indices = (df_x_train.with_row_index("index").sort("distance")
+                         .head(k)["index"].to_list())
+    
+    prediction = pl.Series(sorted(df_y_train[indices])).mode()[0] 
+    
+    return prediction 
+
+print(f"Prediction: {knn(sp_x_train, ["age", "campaign", "marital_married", 
+                                      "marital_single"], 
+                         sp_x_test.row(215, named = True), 3, sp_y_train)}")
+print(f"Actual: {sp_y_test[215]}")
+
+sp_x_test = sp_x_test.with_columns(
+    pl.Series("predicted_y", 
+              [knn(sp_x_train, ["age", "campaign", "marital_married", 
+                                "marital_single"], row, 3, sp_y_train) 
+               for row in sp_x_test.iter_rows(named = True)])
+    )
+
+print(f"Accuracy: {round(sp_x_test.select(
+    ((pl.col("predicted_y") == pl.Series(sp_y_test)).mean() * 100)
+        .alias("accuracy")
+    ).item(), 2)}%")
+
+sp_x_train = sp_x_train.with_columns([
+    (pl.col(feature) - pl.col(feature).min()) / 
+    (pl.col(feature).max() - pl.col(feature).min()) 
+       .alias(feature)
+    for feature in ["age", "campaign"]
+    ])
+
+sp_x_test = sp_x_test.with_columns([
+    (pl.col(feature) - sp_x_train.select(pl.col(feature)).min()).item() / 
+    (sp_x_train.select(pl.col(feature)).max().item() - 
+     sp_x_train.select(pl.col(feature)).min()) 
+       .alias(feature)
+    for feature in ["age", "campaign"]
+    ])
