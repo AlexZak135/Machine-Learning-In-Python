@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: August 3, 2025
+# Date: August 4, 2025
 
 import os
 import polars as pl
@@ -131,17 +131,35 @@ print(f"Accuracy: {round(sp_x_test.select(
         .alias("accuracy")
     ).item(), 2)}%")
 
-sp_x_train = sp_x_train.with_columns([
-    (pl.col(feature) - pl.col(feature).min()) / 
-    (pl.col(feature).max() - pl.col(feature).min()) 
-       .alias(feature)
-    for feature in ["age", "campaign"]
-    ])
+age_min_max = [sp_x_train.select(pl.col("age")).min().item(), 
+               sp_x_train.select(pl.col("age")).max().item()]
+campaign_min_max = [sp_x_train.select(pl.col("campaign")).min().item(), 
+                    sp_x_train.select(pl.col("campaign")).max().item()]
 
-sp_x_test = sp_x_test.with_columns([
-    (pl.col(feature) - sp_x_train.select(pl.col(feature)).min()).item() / 
-    (sp_x_train.select(pl.col(feature)).max().item() - 
-     sp_x_train.select(pl.col(feature)).min()) 
-       .alias(feature)
-    for feature in ["age", "campaign"]
-    ])
+sp_x_train = sp_x_train.with_columns(
+    ((pl.col("age") - age_min_max[0]) / (age_min_max[1] - age_min_max[0])) 
+        .alias("age"),
+    ((pl.col("campaign") - campaign_min_max[0]) / 
+     (campaign_min_max[1] - campaign_min_max[0]))
+        .alias("campaign")
+    )
+
+sp_x_test = sp_x_test.with_columns(
+    ((pl.col("age") - age_min_max[0]) / (age_min_max[1] - age_min_max[0])) 
+        .alias("age"),
+    ((pl.col("campaign") - campaign_min_max[0]) / 
+     (campaign_min_max[1] - campaign_min_max[0]))
+        .alias("campaign")
+    )    
+
+sp_x_test = sp_x_test.with_columns(
+    pl.Series("predicted_y",
+              [knn(sp_x_train, ["age", "campaign", "marital_married", 
+                                "marital_single"], row, 3, sp_y_train) 
+               for row in sp_x_test.iter_rows(named = True)])
+    )
+
+print(f"Accuracy: {round(sp_x_test.select(
+    ((pl.col("predicted_y") == pl.Series(sp_y_test)).mean() * 100)
+        .alias("accuracy")
+    ).item(), 2)}%")
