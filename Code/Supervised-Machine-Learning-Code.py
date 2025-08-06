@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: August 4, 2025
+# Date: August 5, 2025
 
 import os
 import polars as pl
@@ -163,3 +163,22 @@ print(f"Accuracy: {round(sp_x_test.select(
     ((pl.col("predicted_y") == pl.Series(sp_y_test)).mean() * 100)
         .alias("accuracy")
     ).item(), 2)}%")
+
+sp = (
+    pl.read_parquet("Subscription-Prediction.parquet")
+      .with_columns(
+          pl.when(pl.col("y") == "yes")
+            .then(1)
+            .otherwise(0)
+            .alias("y")
+          )
+    )
+
+sp_x_remain, sp_x_val, sp_y_remain, sp_y_val = train_test_split(
+    sp.drop("y"), sp.select("y").to_series(), test_size = 0.20, 
+    random_state = 417
+    ) 
+
+sp_x_train, sp_x_test, sp_y_train, sp_y_test = train_test_split(
+    sp_x_remain, sp_y_remain, test_size = 0.25, random_state = 417
+    ) 
