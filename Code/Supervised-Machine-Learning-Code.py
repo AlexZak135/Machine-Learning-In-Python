@@ -1,12 +1,14 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: August 5, 2025
+# Date: August 11, 2025
 
 import os
 import polars as pl
 from sklearn.datasets import load_breast_cancer
 
 from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import LinearSVC
 
 os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
@@ -34,7 +36,6 @@ bc_model_2.score(bc_x_test, bc_y_test)
 
 sp = (
     pl.read_parquet("Subscription-Prediction.parquet")
-      .filter(pl.col("marital") != "unknown")
       .with_row_index("index")
       .to_dummies(columns = "marital")
       .with_columns(
@@ -166,6 +167,8 @@ print(f"Accuracy: {round(sp_x_test.select(
 
 sp = (
     pl.read_parquet("Subscription-Prediction.parquet")
+      .to_dummies(columns = ["marital", "default"]) 
+      .drop("marital_divorced", "default_no")
       .with_columns(
           pl.when(pl.col("y") == "yes")
             .then(1)
@@ -182,3 +185,25 @@ sp_x_remain, sp_x_val, sp_y_remain, sp_y_val = train_test_split(
 sp_x_train, sp_x_test, sp_y_train, sp_y_test = train_test_split(
     sp_x_remain, sp_y_remain, test_size = 0.25, random_state = 417
     ) 
+
+scaler = MinMaxScaler()
+
+sp_x_train = scaler.fit_transform(
+    sp_x_train[["marital_married", "marital_single", "marital_unknown", 
+                "default_unknown", "age", "duration"]]
+    )
+
+knn = KNeighborsClassifier(n_neighbors = 1)
+knn.fit(sp_x_train, sp_y_train)
+
+sp_x_val = scaler.transform(
+    sp_x_val[["marital_married", "marital_single", "marital_unknown", 
+              "default_unknown", "age", "duration"]]
+    )
+
+knn.score(sp_x_val, sp_y_val)
+
+knn = KNeighborsClassifier(n_neighbors = 2_000)
+knn.fit(sp_x_train, sp_y_train)
+
+knn.score(sp_x_val, sp_y_val)
