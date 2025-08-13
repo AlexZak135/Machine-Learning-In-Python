@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: August 11, 2025
+# Date: August 12, 2025
 
 import os
 import polars as pl
@@ -207,3 +207,15 @@ knn = KNeighborsClassifier(n_neighbors = 2_000)
 knn.fit(sp_x_train, sp_y_train)
 
 knn.score(sp_x_val, sp_y_val)
+
+knn = KNeighborsClassifier(n_neighbors = 5)
+knn.fit(sp_x_train, sp_y_train)
+
+knn.score(sp_x_val, sp_y_val)
+
+sp_x_test = scaler.transform(
+    sp_x_test[["marital_married", "marital_single", "marital_unknown", 
+               "default_unknown", "age", "duration"]]
+    )
+
+knn.score(sp_x_test, sp_y_test)
