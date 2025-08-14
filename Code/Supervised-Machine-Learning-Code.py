@@ -1,9 +1,10 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: August 12, 2025
+# Date: August 13, 2025
 
 import os
 import polars as pl
+import polars.selectors as cs
 from sklearn.datasets import load_breast_cancer
 
 from sklearn.model_selection import train_test_split
@@ -219,3 +220,44 @@ sp_x_test = scaler.transform(
     )
 
 knn.score(sp_x_test, sp_y_test)
+
+sp = (
+    pl.read_parquet("Subscription-Prediction.parquet")
+      .with_columns(
+          pl.when(pl.col("y") == "yes")
+            .then(1)
+            .otherwise(0)
+            .alias("y")
+          )
+    )
+
+correlations = pl.DataFrame({
+    "variable": [col for col in sp.select(cs.numeric()).columns if col != "y"],
+    "correlation": [sp.select(pl.corr("y", col).abs()).item() 
+                    for col in sp.select(cs.numeric()).columns if col != "y"]
+    }).sort("correlation", descending = True).limit(5)
+top_five = correlations.get_column("variable").to_list()  
+
+sp_x_remain, sp_x_val, sp_y_remain, sp_y_val = train_test_split(
+    sp.select(top_five), sp.get_column("y"), test_size = 0.20, 
+    random_state = 417
+    ) 
+
+sp_x_train, sp_x_test, sp_y_train, sp_y_test = train_test_split(
+    sp_x_remain, sp_y_remain, test_size = 0.25, random_state = 417
+    ) 
+
+scaler = MinMaxScaler()
+
+sp_x_train = scaler.fit_transform(sp_x_train)
+sp_x_val = scaler.transform(sp_x_val)
+
+accuracies = {}
+
+for neighbors in range(1, 7):
+    knn = KNeighborsClassifier(n_neighbors = neighbors)
+    knn.fit(sp_x_train, sp_y_train)
+    accuracy = knn.score(sp_x_val, sp_y_val) 
+    accuracies[neighbors] = accuracy
+
+print(accuracies)
