@@ -1,18 +1,38 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: August 13, 2025
+# Date: August 15, 2025
 
 import os
 import polars as pl
+
+os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
+
+# Part 1: K-Nearest Neighbors
+
+hd = pl.read_csv("Heart-Disease-Data.csv")
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+
+
 import polars.selectors as cs
 from sklearn.datasets import load_breast_cancer
 
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import LinearSVC
 
-os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
+
 
 # Part 1: Machine Learning Workflow
 
@@ -251,13 +271,48 @@ scaler = MinMaxScaler()
 
 sp_x_train = scaler.fit_transform(sp_x_train)
 sp_x_val = scaler.transform(sp_x_val)
+sp_x_test = scaler.transform(sp_x_test)
 
 accuracies = {}
 
-for neighbors in range(1, 7):
+for neighbors in range(1, 6):
     knn = KNeighborsClassifier(n_neighbors = neighbors)
     knn.fit(sp_x_train, sp_y_train)
     accuracy = knn.score(sp_x_val, sp_y_val) 
     accuracies[neighbors] = accuracy
 
 print(accuracies)
+
+for neighbors in range(1, 6):
+    knn = KNeighborsClassifier(n_neighbors = neighbors, weights = "distance", 
+                               p = 5)
+    knn.fit(sp_x_train, sp_y_train)
+    accuracy = knn.score(sp_x_val, sp_y_val) 
+    accuracies[neighbors] = accuracy
+
+print(accuracies)
+
+knn = KNeighborsClassifier()
+knn_grid = GridSearchCV(knn, 
+                        {"n_neighbors": range(1, 10), 
+                         "metric": ["minkowski", "manhattan"]}, 
+                        scoring = "accuracy")
+knn_grid.fit(sp_x_train, sp_y_train)
+print(best_score_)
+print(best_params_)
+
+knn_grid.best_estimator_.score(sp_x_val, sp_y_val)
+knn_grid.best_estimator_.score(sp_x_test, sp_y_test)
+
+Age: age of the patient [years]
+Sex: sex of the patient [M: Male, F: Female]
+ChestPainType: chest pain type [TA: Typical Angina, ATA: Atypical Angina, NAP: Non-Anginal Pain, ASY: Asymptomatic]
+RestingBP: resting blood pressure [mm Hg]
+Cholesterol: serum cholesterol [mm/dl]
+FastingBS: fasting blood sugar [1: if FastingBS > 120 mg/dl, 0: otherwise]
+RestingECG: resting electrocardiogram results [Normal: Normal, ST: having ST-T wave abnormality (T wave inversions and/or ST elevation or depression of > 0.05 mV), LVH: showing probable or definite left ventricular hypertrophy by Estes' criteria]
+MaxHR: maximum heart rate achieved [Numeric value between 60 and 202]
+ExerciseAngina: exercise-induced angina [Y: Yes, N: No]
+Oldpeak: oldpeak = ST [Numeric value measured in depression]
+ST_Slope: the slope of the peak exercise ST segment [Up: upsloping, Flat: flat, Down: downsloping]
+HeartDisease: output class [1: heart disease, 0: Normal]
