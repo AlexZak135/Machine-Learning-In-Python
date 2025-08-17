@@ -1,20 +1,143 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: August 15, 2025
+# Date: August 17, 2025
 
+import numpy as np
 import os
+import pandas as pd
 import polars as pl
+
+from scipy.stats import chi2_contingency
 
 os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
 
 # Part 1: K-Nearest Neighbors
 
-hd = pl.read_csv("Heart-Disease-Data.csv")
+hd = (
+    pl.read_csv("Heart-Disease-Data.csv")
+      .rename(str.lower)
+      .filter(pl.col("age").is_between(35, 75) & 
+              (pl.col("restingbp") >= 80) &
+              pl.col("cholesterol").is_between(100, 500) & 
+              (pl.col("oldpeak") >= 0))
+    )
+
+hd_cat   
+hd_num
 
 
 
 
 
+hd.select("age").describe()
+hd.select(pl.corr("age", "heartdisease", method = "pearson"))
+
+hd.select(pl.col("sex").value_counts())
+hd_sex = hd.select("sex", "heartdisease").with_columns(
+    pl.col("heartdisease").cast(pl.Utf8).alias("heartdisease")
+    ).to_pandas()
+table_sex = pd.crosstab(hd_sex["sex"], hd_sex["heartdisease"])
+chi2, p, dof, expected = chi2_contingency(table_sex)
+n_sex = table_sex.sum().sum()
+cramers_v_sex = np.sqrt(chi2 / (n_sex * (min(table_sex.shape) - 1)))
+
+hd.select(pl.col("chestpaintype").value_counts())
+hd_cpt = hd.select("chestpaintype", "heartdisease").with_columns(
+    pl.col("heartdisease").cast(pl.Utf8).alias("heartdisease")
+    ).to_pandas()
+table_cpt = pd.crosstab(hd_cpt["chestpaintype"], hd_cpt["heartdisease"])
+chi2, p, dof, expected = chi2_contingency(table_cpt)
+n_cpt = table_cpt.sum().sum()
+cramers_v_cpt = np.sqrt(chi2 / (n_cpt * (min(table_cpt.shape) - 1)))
+
+hd.select("restingbp").describe()
+hd.select(pl.corr("restingbp", "heartdisease", method = "pearson"))
+
+hd.select("cholesterol").describe()
+hd.select(pl.corr("cholesterol", "heartdisease", method = "pearson"))
+
+hd.select(pl.col("fastingbs").value_counts())
+hd_fbs = hd.select("fastingbs", "heartdisease").with_columns(
+    pl.col("heartdisease").cast(pl.Utf8).alias("heartdisease")
+    ).to_pandas()
+table_fbs = pd.crosstab(hd_fbs["fastingbs"], hd_fbs["heartdisease"])
+chi2, p, dof, expected = chi2_contingency(table_fbs)
+n_fbs = table_fbs.sum().sum()
+cramers_v_fbs = np.sqrt(chi2 / (n_cpt * (min(table_fbs.shape) - 1)))
+
+hd.select(pl.col("restingecg").value_counts())
+hd_recg = hd.select("restingecg", "heartdisease").with_columns(
+    pl.col("heartdisease").cast(pl.Utf8).alias("heartdisease")
+    ).to_pandas()
+table_recg = pd.crosstab(hd_recg["restingecg"], hd_recg["heartdisease"])
+chi2, p, dof, expected = chi2_contingency(table_recg)
+n_recg = table_recg.sum().sum()
+cramers_v_recg = np.sqrt(chi2 / (n_cpt * (min(table_recg.shape) - 1)))
+
+hd.select("maxhr").describe()
+hd.select(pl.corr("maxhr", "heartdisease", method = "pearson"))
+
+hd.select(pl.col("exerciseangina").value_counts())
+hd_ea = hd.select("exerciseangina", "heartdisease").with_columns(
+    pl.col("heartdisease").cast(pl.Utf8).alias("heartdisease")
+    ).to_pandas()
+table_ea = pd.crosstab(hd_ea["exerciseangina"], hd_ea["heartdisease"])
+chi2, p, dof, expected = chi2_contingency(table_ea)
+n_ea = table_ea.sum().sum()
+cramers_v_ea = np.sqrt(chi2 / (n_cpt * (min(table_ea.shape) - 1)))
+
+hd.select("oldpeak").describe()
+hd.select(pl.corr("oldpeak", "heartdisease", method = "pearson"))
+
+hd.select(pl.col("st_slope").value_counts())
+hd_ss = hd.select("st_slope", "heartdisease").with_columns(
+    pl.col("heartdisease").cast(pl.Utf8).alias("heartdisease")
+    ).to_pandas()
+table_ss = pd.crosstab(hd_ss["st_slope"], hd_ss["heartdisease"])
+chi2, p, dof, expected = chi2_contingency(table_ss)
+n_ss = table_ss.sum().sum()
+cramers_v_ss = np.sqrt(chi2 / (n_cpt * (min(table_ss.shape) - 1)))
+
+hd.select(pl.col("heartdisease").value_counts())
+
+
+
+
+################################################################################
+hd = pl.read_csv("Heart-Disease-Data.csv").rename(str.lower)
+################################################################################
+
+
+hd.select(pl.corr(pl.col("age").log(), pl.col("heartdisease"), method = "pearson"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+print("Chi-square statistic:", chi2)
+print("p-value:", p)
+print("Degrees of freedom:", dof)
+print("Cramer's V:", cramers_v)
+
+
+
+
+
+# Perform chi-square tests
+chi2_contingency(pd.crosstab(test_inputs["same_state"], test_inputs["late"]))
+chi2_contingency(pd.crosstab(test_inputs["pickup_period"], test_inputs["late"]))
+chi2_contingency(pd.crosstab(test_inputs["actual_arrive_period"], 
+                             test_inputs["late"]))
+# Convert to a Pandas dataframe
 
 
 
@@ -23,6 +146,18 @@ hd = pl.read_csv("Heart-Disease-Data.csv")
 
 ################################################################################
 
+Age: age of the patient [years]
+Sex: sex of the patient [M: Male, F: Female]
+ChestPainType: chest pain type [TA: Typical Angina, ATA: Atypical Angina, NAP: Non-Anginal Pain, ASY: Asymptomatic]
+RestingBP: resting blood pressure [mm Hg]
+Cholesterol: serum cholesterol [mm/dl]
+FastingBS: fasting blood sugar [1: if FastingBS > 120 mg/dl, 0: otherwise]
+RestingECG: resting electrocardiogram results [Normal: Normal, ST: having ST-T wave abnormality (T wave inversions and/or ST elevation or depression of > 0.05 mV), LVH: showing probable or definite left ventricular hypertrophy by Estes' criteria]
+MaxHR: maximum heart rate achieved [Numeric value between 60 and 202]
+ExerciseAngina: exercise-induced angina [Y: Yes, N: No]
+Oldpeak: oldpeak = ST [Numeric value measured in depression]
+ST_Slope: the slope of the peak exercise ST segment [Up: upsloping, Flat: flat, Down: downsloping]
+HeartDisease: output class [1: heart disease, 0: Normal]
 
 import polars.selectors as cs
 from sklearn.datasets import load_breast_cancer
@@ -303,16 +438,3 @@ print(best_params_)
 
 knn_grid.best_estimator_.score(sp_x_val, sp_y_val)
 knn_grid.best_estimator_.score(sp_x_test, sp_y_test)
-
-Age: age of the patient [years]
-Sex: sex of the patient [M: Male, F: Female]
-ChestPainType: chest pain type [TA: Typical Angina, ATA: Atypical Angina, NAP: Non-Anginal Pain, ASY: Asymptomatic]
-RestingBP: resting blood pressure [mm Hg]
-Cholesterol: serum cholesterol [mm/dl]
-FastingBS: fasting blood sugar [1: if FastingBS > 120 mg/dl, 0: otherwise]
-RestingECG: resting electrocardiogram results [Normal: Normal, ST: having ST-T wave abnormality (T wave inversions and/or ST elevation or depression of > 0.05 mV), LVH: showing probable or definite left ventricular hypertrophy by Estes' criteria]
-MaxHR: maximum heart rate achieved [Numeric value between 60 and 202]
-ExerciseAngina: exercise-induced angina [Y: Yes, N: No]
-Oldpeak: oldpeak = ST [Numeric value measured in depression]
-ST_Slope: the slope of the peak exercise ST segment [Up: upsloping, Flat: flat, Down: downsloping]
-HeartDisease: output class [1: heart disease, 0: Normal]
