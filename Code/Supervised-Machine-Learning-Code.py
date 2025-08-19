@@ -1,13 +1,13 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: August 17, 2025
+# Date: August 18, 2025
 
 import numpy as np
 import os
 import pandas as pd
 import polars as pl
 
-from scipy.stats import chi2_contingency
+from dython.nominal import associations
 
 os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
 
@@ -16,18 +16,45 @@ os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
 hd = (
     pl.read_csv("Heart-Disease-Data.csv")
       .rename(str.lower)
+      .rename({"chestpaintype": "chest_pain_type",
+               "fastingbs": "fasting_bs", 
+                "restingecg": "resting_ecg",
+                "maxhr": "max_hr",   
+                "exerciseangina": "exercise_angina",
+                "oldpeak": "old_peak",
+                "heartdisease": "heart_disease"})
       .filter(pl.col("age").is_between(35, 75) & 
               (pl.col("restingbp") >= 80) &
               pl.col("cholesterol").is_between(100, 500) & 
-              (pl.col("oldpeak") >= 0))
+              (pl.col("old_peak") >= 0))
     )
 
-hd_cat   
-hd_num
+hd_cat = (
+    hd.select("sex", "chest_pain_type", "fasting_bs", "resting_ecg", 
+              "exercise_angina", "st_slope", "heart_disease")
+      .with_columns([
+          pl.col(col).cast(pl.Utf8).alias(col) 
+          for col in ["fasting_bs", "heart_disease"]
+          ])
+      .to_pandas()
+    )
+
+hd_num = (
+    hd.select("age", "restingbp", "cholesterol", "max_hr", "old_peak", 
+              "heart_disease")
+      .with_columns(
+          pl.col("heart_disease").cast(pl.Utf8).alias("heart_disease")
+          )
+    )
 
 
 
-
+associations(
+    hd_cat[["sex", "heart_disease"]],
+    nom_nom_assoc = "cramer",
+    cramers_v_bias_correction = True,   
+    compute_only = True        
+    )
 
 hd.select("age").describe()
 hd.select(pl.corr("age", "heartdisease", method = "pearson"))
