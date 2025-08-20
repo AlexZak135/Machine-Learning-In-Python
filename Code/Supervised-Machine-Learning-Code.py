@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: August 18, 2025
+# Date: August 19, 2025
 
 import numpy as np
 import os
@@ -8,6 +8,7 @@ import pandas as pd
 import polars as pl
 
 from dython.nominal import associations
+from scipy.stats import chi2_contingency
 
 os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
 
@@ -23,8 +24,7 @@ hd = (
                 "exerciseangina": "exercise_angina",
                 "oldpeak": "old_peak",
                 "heartdisease": "heart_disease"})
-      .filter(pl.col("age").is_between(35, 75) & 
-              (pl.col("restingbp") >= 80) &
+      .filter(pl.col("age").is_between(35, 75) & (pl.col("restingbp") >= 80) &
               pl.col("cholesterol").is_between(100, 500) & 
               (pl.col("old_peak") >= 0))
     )
@@ -47,83 +47,47 @@ hd_num = (
           )
     )
 
+hd_results = []
+
+for col in ["sex", "chest_pain_type", "fasting_bs", "resting_ecg", 
+            "exercise_angina", "st_slope"]:
+    chi2, p, dof, expected = chi2_contingency(
+        pd.crosstab(hd_cat[col], hd_cat["heart_disease"])
+        )
+    
+    if p < 0.001:
+        p = "<0.001"
+    else:
+        p = str(round(p, 3))
+    
+    cramers_v = (
+        associations(hd_cat[[col, "heart_disease"]], 
+                     nom_nom_assoc = "cramer", 
+                     cramers_v_bias_correction = True, 
+                     compute_only = True)
+        ["corr"].loc[col, "heart_disease"].round(2)
+        )
+    
+    hd_results.append({"variable": col, 
+                       "p_value": p, 
+                       "cramers_v": cramers_v})
+    
+hd_results = pl.DataFrame(hd_results)
 
 
-associations(
-    hd_cat[["sex", "heart_disease"]],
-    nom_nom_assoc = "cramer",
-    cramers_v_bias_correction = True,   
-    compute_only = True        
-    )
+
+
 
 hd.select("age").describe()
-hd.select(pl.corr("age", "heartdisease", method = "pearson"))
-
-hd.select(pl.col("sex").value_counts())
-hd_sex = hd.select("sex", "heartdisease").with_columns(
-    pl.col("heartdisease").cast(pl.Utf8).alias("heartdisease")
-    ).to_pandas()
-table_sex = pd.crosstab(hd_sex["sex"], hd_sex["heartdisease"])
-chi2, p, dof, expected = chi2_contingency(table_sex)
-n_sex = table_sex.sum().sum()
-cramers_v_sex = np.sqrt(chi2 / (n_sex * (min(table_sex.shape) - 1)))
-
-hd.select(pl.col("chestpaintype").value_counts())
-hd_cpt = hd.select("chestpaintype", "heartdisease").with_columns(
-    pl.col("heartdisease").cast(pl.Utf8).alias("heartdisease")
-    ).to_pandas()
-table_cpt = pd.crosstab(hd_cpt["chestpaintype"], hd_cpt["heartdisease"])
-chi2, p, dof, expected = chi2_contingency(table_cpt)
-n_cpt = table_cpt.sum().sum()
-cramers_v_cpt = np.sqrt(chi2 / (n_cpt * (min(table_cpt.shape) - 1)))
-
+hd.select(pl.corr("age", "heart_disease", method = "pearson"))
 hd.select("restingbp").describe()
-hd.select(pl.corr("restingbp", "heartdisease", method = "pearson"))
-
+hd.select(pl.corr("restingbp", "heart_disease", method = "pearson"))
 hd.select("cholesterol").describe()
-hd.select(pl.corr("cholesterol", "heartdisease", method = "pearson"))
-
-hd.select(pl.col("fastingbs").value_counts())
-hd_fbs = hd.select("fastingbs", "heartdisease").with_columns(
-    pl.col("heartdisease").cast(pl.Utf8).alias("heartdisease")
-    ).to_pandas()
-table_fbs = pd.crosstab(hd_fbs["fastingbs"], hd_fbs["heartdisease"])
-chi2, p, dof, expected = chi2_contingency(table_fbs)
-n_fbs = table_fbs.sum().sum()
-cramers_v_fbs = np.sqrt(chi2 / (n_cpt * (min(table_fbs.shape) - 1)))
-
-hd.select(pl.col("restingecg").value_counts())
-hd_recg = hd.select("restingecg", "heartdisease").with_columns(
-    pl.col("heartdisease").cast(pl.Utf8).alias("heartdisease")
-    ).to_pandas()
-table_recg = pd.crosstab(hd_recg["restingecg"], hd_recg["heartdisease"])
-chi2, p, dof, expected = chi2_contingency(table_recg)
-n_recg = table_recg.sum().sum()
-cramers_v_recg = np.sqrt(chi2 / (n_cpt * (min(table_recg.shape) - 1)))
-
+hd.select(pl.corr("cholesterol", "heart_disease", method = "pearson"))
 hd.select("maxhr").describe()
-hd.select(pl.corr("maxhr", "heartdisease", method = "pearson"))
-
-hd.select(pl.col("exerciseangina").value_counts())
-hd_ea = hd.select("exerciseangina", "heartdisease").with_columns(
-    pl.col("heartdisease").cast(pl.Utf8).alias("heartdisease")
-    ).to_pandas()
-table_ea = pd.crosstab(hd_ea["exerciseangina"], hd_ea["heartdisease"])
-chi2, p, dof, expected = chi2_contingency(table_ea)
-n_ea = table_ea.sum().sum()
-cramers_v_ea = np.sqrt(chi2 / (n_cpt * (min(table_ea.shape) - 1)))
-
+hd.select(pl.corr("max_hr", "heart_disease", method = "pearson"))
 hd.select("oldpeak").describe()
-hd.select(pl.corr("oldpeak", "heartdisease", method = "pearson"))
-
-hd.select(pl.col("st_slope").value_counts())
-hd_ss = hd.select("st_slope", "heartdisease").with_columns(
-    pl.col("heartdisease").cast(pl.Utf8).alias("heartdisease")
-    ).to_pandas()
-table_ss = pd.crosstab(hd_ss["st_slope"], hd_ss["heartdisease"])
-chi2, p, dof, expected = chi2_contingency(table_ss)
-n_ss = table_ss.sum().sum()
-cramers_v_ss = np.sqrt(chi2 / (n_cpt * (min(table_ss.shape) - 1)))
+hd.select(pl.corr("old_peak", "heart_disease", method = "pearson"))
 
 hd.select(pl.col("heartdisease").value_counts())
 
