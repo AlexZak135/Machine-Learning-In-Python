@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: August 19, 2025
+# Date: August 20, 2025
 
 import numpy as np
 import os
@@ -47,10 +47,11 @@ hd_num = (
           )
     )
 
-hd_results = []
+hd_cat_results = []
 
 for col in ["sex", "chest_pain_type", "fasting_bs", "resting_ecg", 
             "exercise_angina", "st_slope"]:
+    
     chi2, p, dof, expected = chi2_contingency(
         pd.crosstab(hd_cat[col], hd_cat["heart_disease"])
         )
@@ -61,74 +62,68 @@ for col in ["sex", "chest_pain_type", "fasting_bs", "resting_ecg",
         p = str(round(p, 3))
     
     cramers_v = (
-        associations(hd_cat[[col, "heart_disease"]], 
-                     nom_nom_assoc = "cramer", 
-                     cramers_v_bias_correction = True, 
-                     compute_only = True)
+        associations(hd_cat[[col, "heart_disease"]], compute_only = True)
         ["corr"].loc[col, "heart_disease"].round(2)
         )
     
-    hd_results.append({"variable": col, 
-                       "p_value": p, 
-                       "cramers_v": cramers_v})
+    hd_cat_results.append({"variable": col, 
+                           "p_value": p, 
+                           "cramers_v": cramers_v})
+      
+hd_cat_results = (
+    pl.DataFrame(hd_cat_results)
+      .with_columns(
+          pl.when(pl.col("variable") == "sex")
+            .then(pl.lit("Sex"))
+            .when(pl.col("variable") == "chest_pain_type")
+            .then(pl.lit("Chest Pain Type"))
+            .when(pl.col("variable") == "fasting_bs")
+            .then(pl.lit("Fasting Blood Sugar"))
+            .when(pl.col("variable") == "resting_ecg")
+            .then(pl.lit("Resting ECG"))
+            .when(pl.col("variable") == "exercise_angina")
+            .then(pl.lit("Exercise Angina"))
+            .when(pl.col("variable") == "st_slope")
+            .then(pl.lit("ST Slope"))
+            .alias("variable") 
+          )
+      .sort("cramers_v", descending = True)
+    )
+
+hd_num_results = []
+
+for col in ["age", "restingbp", "cholesterol", "max_hr", "old_peak"]:
+    corr = hd_num.select(pl.corr(col, "heart_disease").round(2)).item() 
     
-hd_results = pl.DataFrame(hd_results)
+    hd_num_results.append({"variable": col, 
+                           "correlation": corr})
+      
+hd_num_results = (
+    pl.DataFrame(hd_num_results)
+      .with_columns(
+          pl.when(pl.col("variable") == "age")
+            .then(pl.lit("Age"))
+            .when(pl.col("variable") == "restingbp")
+            .then(pl.lit("Resting Blood Pressure"))
+            .when(pl.col("variable") == "cholesterol")
+            .then(pl.lit("Cholesterol"))
+            .when(pl.col("variable") == "max_hr")
+            .then(pl.lit("Maximum Heart Rate"))
+            .when(pl.col("variable") == "old_peak")
+            .then(pl.lit("ST Depression"))
+            .alias("variable"),
+          pl.when(pl.col("correlation") > 0)
+            .then(pl.lit("Positive"))
+            .otherwise(pl.lit("Negative"))
+            .alias("sign")
+          )
+      .with_columns(
+          pl.col("correlation").abs().alias("correlation") 
+          )
+      .sort("correlation", descending = True) 
+    )          
 
 
-
-
-
-hd.select("age").describe()
-hd.select(pl.corr("age", "heart_disease", method = "pearson"))
-hd.select("restingbp").describe()
-hd.select(pl.corr("restingbp", "heart_disease", method = "pearson"))
-hd.select("cholesterol").describe()
-hd.select(pl.corr("cholesterol", "heart_disease", method = "pearson"))
-hd.select("maxhr").describe()
-hd.select(pl.corr("max_hr", "heart_disease", method = "pearson"))
-hd.select("oldpeak").describe()
-hd.select(pl.corr("old_peak", "heart_disease", method = "pearson"))
-
-hd.select(pl.col("heartdisease").value_counts())
-
-
-
-
-################################################################################
-hd = pl.read_csv("Heart-Disease-Data.csv").rename(str.lower)
-################################################################################
-
-
-hd.select(pl.corr(pl.col("age").log(), pl.col("heartdisease"), method = "pearson"))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-print("Chi-square statistic:", chi2)
-print("p-value:", p)
-print("Degrees of freedom:", dof)
-print("Cramer's V:", cramers_v)
-
-
-
-
-
-# Perform chi-square tests
-chi2_contingency(pd.crosstab(test_inputs["same_state"], test_inputs["late"]))
-chi2_contingency(pd.crosstab(test_inputs["pickup_period"], test_inputs["late"]))
-chi2_contingency(pd.crosstab(test_inputs["actual_arrive_period"], 
-                             test_inputs["late"]))
-# Convert to a Pandas dataframe
 
 
 
