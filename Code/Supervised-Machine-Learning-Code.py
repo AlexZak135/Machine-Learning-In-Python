@@ -1,11 +1,13 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: August 20, 2025
+# Date: August 21, 2025
 
 import numpy as np
 import os
 import pandas as pd
 import polars as pl
+
+from plotnine import *
 
 from dython.nominal import associations
 from scipy.stats import chi2_contingency
@@ -18,13 +20,14 @@ hd = (
     pl.read_csv("Heart-Disease-Data.csv")
       .rename(str.lower)
       .rename({"chestpaintype": "chest_pain_type",
+               "restingbp": "resting_bp",
                "fastingbs": "fasting_bs", 
-                "restingecg": "resting_ecg",
-                "maxhr": "max_hr",   
-                "exerciseangina": "exercise_angina",
-                "oldpeak": "old_peak",
-                "heartdisease": "heart_disease"})
-      .filter(pl.col("age").is_between(35, 75) & (pl.col("restingbp") >= 80) &
+               "restingecg": "resting_ecg",
+               "maxhr": "max_hr",   
+               "exerciseangina": "exercise_angina",
+               "oldpeak": "old_peak",
+               "heartdisease": "heart_disease"})
+      .filter(pl.col("age").is_between(35, 75) & (pl.col("resting_bp") >= 80) &
               pl.col("cholesterol").is_between(100, 500) & 
               (pl.col("old_peak") >= 0))
     )
@@ -40,7 +43,7 @@ hd_cat = (
     )
 
 hd_num = (
-    hd.select("age", "restingbp", "cholesterol", "max_hr", "old_peak", 
+    hd.select("age", "resting_bp", "cholesterol", "max_hr", "old_peak", 
               "heart_disease")
       .with_columns(
           pl.col("heart_disease").cast(pl.Utf8).alias("heart_disease")
@@ -92,7 +95,7 @@ hd_cat_results = (
 
 hd_num_results = []
 
-for col in ["age", "restingbp", "cholesterol", "max_hr", "old_peak"]:
+for col in ["age", "resting_bp", "cholesterol", "max_hr", "old_peak"]:
     corr = hd_num.select(pl.corr(col, "heart_disease").round(2)).item() 
     
     hd_num_results.append({"variable": col, 
@@ -103,7 +106,7 @@ hd_num_results = (
       .with_columns(
           pl.when(pl.col("variable") == "age")
             .then(pl.lit("Age"))
-            .when(pl.col("variable") == "restingbp")
+            .when(pl.col("variable") == "resting_bp")
             .then(pl.lit("Resting Blood Pressure"))
             .when(pl.col("variable") == "cholesterol")
             .then(pl.lit("Cholesterol"))
@@ -123,10 +126,32 @@ hd_num_results = (
       .sort("correlation", descending = True) 
     )          
 
+(ggplot(hd_cat_results, aes(x = "reorder(variable, cramers_v)", 
+                            y = "cramers_v")) +
+   geom_col(width = 0.80, fill = "#005288") +
+   scale_y_continuous(labels = lambda x: [str(int(v)) if v == int(v) 
+                                          else f"{v:.2f}" for v in x]) +
+   labs(title = "Cramer's V: Categorical Variables vs. Heart Disease", 
+        x = "", y = "") +
+   coord_flip() +
+   theme_538() + 
+   theme(panel_grid_major_y = element_blank()))
 
+(ggplot(hd_num_results, aes(x = "reorder(variable, correlation)", 
+                            y = "correlation", fill = "sign")) +
+   geom_col(width = 0.80) +
+   scale_y_continuous(labels = lambda x: [str(int(v)) if v == int(v) 
+                                          else f"{v:.2f}" for v in x]) +
+   scale_fill_manual(values = {"Positive": "#5e9732", "Negative": "#c41230"}) +
+   labs(title = "Correlations: Numeric Variables vs. Heart Disease", 
+        x = "", y = "", fill = "") +
+   coord_flip() +
+   theme_538() +
+   theme(panel_grid_major_y = element_blank(), 
+         legend_position = "top"))
 
-
-
+hd = (
+    hd.drop("resting_bp", "cholesterol", "fasting_bs", "resting_ecg")
 
 
 
