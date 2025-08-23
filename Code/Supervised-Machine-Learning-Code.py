@@ -1,16 +1,17 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: August 21, 2025
+# Date: August 22, 2025
 
 import numpy as np
 import os
 import pandas as pd
 import polars as pl
 
-from plotnine import *
-
 from dython.nominal import associations
+from plotnine import *
 from scipy.stats import chi2_contingency
+
+from sklearn.model_selection import train_test_split
 
 os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
 
@@ -152,8 +153,47 @@ hd_num_results = (
 
 hd = (
     hd.drop("resting_bp", "cholesterol", "fasting_bs", "resting_ecg")
+      .to_dummies(columns = ["sex", "chest_pain_type", "exercise_angina", 
+                             "st_slope"])
+      .rename(str.lower)
+    )
+
+hd_x_train, hd_x_test, hd_y_train, hd_y_test = train_test_split(
+    hd.drop("heart_disease"), hd.select("heart_disease").to_series(), 
+    test_size = 0.20, random_state = 123
+    )
+
+scaler = MinMaxScaler()
+
+hd_x_train = hd_x_train.fit_transform(
+    hd_x_train.select("age", "max_hr", "old_peak")
+    )
+    
 
 
+
+sp_x_train = scaler.fit_transform(
+    sp_x_train[["marital_married", "marital_single", "marital_unknown", 
+                "default_unknown", "age", "duration"]]
+    )
+
+
+
+
+
+knn = KNeighborsClassifier(n_neighbors = 1)
+knn.fit(sp_x_train, sp_y_train)
+
+sp_x_test = scaler.transform(
+    sp_x_test[["marital_married", "marital_single", "marital_unknown", 
+              "default_unknown", "age", "duration"]]
+    )
+
+knn.score(sp_x_test, sp_y_test)
+         
+
+
+            
 
 ################################################################################
 
