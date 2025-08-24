@@ -11,32 +11,27 @@ import polars as pl
 from dython.nominal import associations
 from scipy.stats import chi2_contingency
 
-# Load to produce data visualizations
-from plotnine import *
-
 # Load to train, test, and evaluate machine learning models
 from sklearn.model_selection import GridSearchCV, KFold, train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler
 
-
-
-#
+# Set the working directory
 os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
-
-
-
 
 # Part 1: K-Nearest Neighbors
 
+# Section 1.1: Data Preprocessing
+
+# Load the data from the CSV file, rename columns, and filter
 hd = (
     pl.read_csv("Heart-Disease-Data.csv")
       .rename(str.lower)
       .rename({"chestpaintype": "chest_pain_type",
                "restingbp": "resting_bp",
-               "fastingbs": "fasting_bs", 
+               "fastingbs": "fasting_bs",
                "restingecg": "resting_ecg",
-               "maxhr": "max_hr",   
+               "maxhr": "max_hr",
                "exerciseangina": "exercise_angina",
                "oldpeak": "old_peak",
                "heartdisease": "heart_disease"})
@@ -45,24 +40,21 @@ hd = (
               (pl.col("old_peak") >= 0))
     )
 
+# Change data types, select columns, and convert to a Pandas dataframe
 hd_cat = (
-    hd.select("sex", "chest_pain_type", "fasting_bs", "resting_ecg", 
-              "exercise_angina", "st_slope", "heart_disease")
-      .with_columns([
-          pl.col(col).cast(pl.Utf8).alias(col) 
-          for col in ["fasting_bs", "heart_disease"]
-          ])
+    hd.with_columns([
+        pl.col(c).cast(pl.Utf8).alias(c) 
+        for c in ["fasting_bs", "heart_disease"]
+        ])
+      .select(pl.col(pl.Utf8))
       .to_pandas()
     )
 
-hd_num = (
-    hd.select("age", "resting_bp", "cholesterol", "max_hr", "old_peak", 
-              "heart_disease")
-      .with_columns(
-          pl.col("heart_disease").cast(pl.Utf8).alias("heart_disease")
-          )
-    )
+# Select columns
+hd_num = hd.select("age", "resting_bp", "cholesterol", "max_hr", "old_peak", 
+                   "heart_disease")
 
+# For each variable perform a chi-square test and then calculate Cramer's V
 hd_cat_results = []
 
 for col in ["sex", "chest_pain_type", "fasting_bs", "resting_ecg", 
@@ -70,26 +62,23 @@ for col in ["sex", "chest_pain_type", "fasting_bs", "resting_ecg",
     
     chi2, p, dof, expected = chi2_contingency(
         pd.crosstab(hd_cat[col], hd_cat["heart_disease"])
-        )
-    
-    if p < 0.001:
-        p = "<0.001"
-    else:
-        p = str(round(p, 3))
+        )    
+    p = "<0.001" if p < 0.001 else str(round(p, 3))
     
     cramers_v = (
-        associations(hd_cat[[col, "heart_disease"]], compute_only = True)
+        associations(hd_cat[[col, "heart_disease"]], compute_only = True) 
         ["corr"].loc[col, "heart_disease"].round(2)
         )
     
     hd_cat_results.append({"variable": col, 
                            "p_value": p, 
                            "cramers_v": cramers_v})
-      
+
+# Create a dataframe, modify values in a column, and sort rows    
 hd_cat_results = (
     pl.DataFrame(hd_cat_results)
       .with_columns(
-          pl.when(pl.col("variable") == "sex")
+          pl.when(pl.col("variable") == "sex")       
             .then(pl.lit("Sex"))
             .when(pl.col("variable") == "chest_pain_type")
             .then(pl.lit("Chest Pain Type"))
@@ -101,10 +90,12 @@ hd_cat_results = (
             .then(pl.lit("Exercise Angina"))
             .when(pl.col("variable") == "st_slope")
             .then(pl.lit("ST Slope"))
-            .alias("variable") 
+            .alias("variable")  
           )
       .sort("cramers_v", descending = True)
     )
+
+
 
 hd_num_results = []
 
@@ -139,29 +130,9 @@ hd_num_results = (
       .sort("correlation", descending = True) 
     )          
 
-(ggplot(hd_cat_results, aes(x = "reorder(variable, cramers_v)", 
-                            y = "cramers_v")) +
-   geom_col(width = 0.80, fill = "#005288") +
-   scale_y_continuous(labels = lambda x: [str(int(v)) if v == int(v) 
-                                          else f"{v:.2f}" for v in x]) +
-   labs(title = "Cramer's V: Categorical Variables vs. Heart Disease", 
-        x = "", y = "") +
-   coord_flip() +
-   theme_538() + 
-   theme(panel_grid_major_y = element_blank()))
 
-(ggplot(hd_num_results, aes(x = "reorder(variable, correlation)", 
-                            y = "correlation", fill = "sign")) +
-   geom_col(width = 0.80) +
-   scale_y_continuous(labels = lambda x: [str(int(v)) if v == int(v) 
-                                          else f"{v:.2f}" for v in x]) +
-   scale_fill_manual(values = {"Positive": "#5e9732", "Negative": "#c41230"}) +
-   labs(title = "Correlations: Numeric Variables vs. Heart Disease", 
-        x = "", y = "", fill = "") +
-   coord_flip() +
-   theme_538() +
-   theme(panel_grid_major_y = element_blank(), 
-         legend_position = "top"))
+
+
 
 hd = (
     hd.drop("resting_bp", "cholesterol", "fasting_bs", "resting_ecg")
