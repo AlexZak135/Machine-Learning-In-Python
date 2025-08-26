@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: August 23, 2025
+# Date: August 25, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -54,6 +54,8 @@ hd_cat = (
 hd_num = hd.select("age", "resting_bp", "cholesterol", "max_hr", "old_peak", 
                    "heart_disease")
 
+# Section 1.2: Exploratory Data Analysis
+
 # For each variable perform a chi-square test and then calculate Cramer's V
 hd_cat_results = []
 
@@ -95,63 +97,51 @@ hd_cat_results = (
       .sort("cramers_v", descending = True)
     )
 
+# Create a dataframe and for each variable perform a correlation test
+hd_num_results = pl.DataFrame({
+    "variable": [col for col in ["age", "resting_bp", "cholesterol", "max_hr", 
+                                 "old_peak"]],
+    "correlation": [hd.select(pl.corr(col, "heart_disease").round(2)).item() 
+                    for col in ["age", "resting_bp", "cholesterol", "max_hr", 
+                                "old_peak"]]
+    # Modify values in a column and sort rows  
+    }).with_columns(
+        pl.when(pl.col("variable") == "age")
+          .then(pl.lit("Age"))
+          .when(pl.col("variable") == "resting_bp")
+          .then(pl.lit("Resting Blood Pressure")) 
+          .when(pl.col("variable") == "cholesterol") 
+          .then(pl.lit("Cholesterol"))
+          .when(pl.col("variable") == "max_hr")
+          .then(pl.lit("Maximum Heart Rate"))
+          .when(pl.col("variable") == "old_peak")
+          .then(pl.lit("ST Depression")) 
+          .alias("variable") 
+     ).sort("correlation", descending = True)
 
+# Part 4: Machine Learning Model
 
-hd_num_results = []
-
-for col in ["age", "resting_bp", "cholesterol", "max_hr", "old_peak"]:
-    corr = hd_num.select(pl.corr(col, "heart_disease").round(2)).item() 
-    
-    hd_num_results.append({"variable": col, 
-                           "correlation": corr})
-      
-hd_num_results = (
-    pl.DataFrame(hd_num_results)
-      .with_columns(
-          pl.when(pl.col("variable") == "age")
-            .then(pl.lit("Age"))
-            .when(pl.col("variable") == "resting_bp")
-            .then(pl.lit("Resting Blood Pressure"))
-            .when(pl.col("variable") == "cholesterol")
-            .then(pl.lit("Cholesterol"))
-            .when(pl.col("variable") == "max_hr")
-            .then(pl.lit("Maximum Heart Rate"))
-            .when(pl.col("variable") == "old_peak")
-            .then(pl.lit("ST Depression"))
-            .alias("variable"),
-          pl.when(pl.col("correlation") > 0)
-            .then(pl.lit("Positive"))
-            .otherwise(pl.lit("Negative"))
-            .alias("sign")
-          )
-      .with_columns(
-          pl.col("correlation").abs().alias("correlation") 
-          )
-      .sort("correlation", descending = True) 
-    )          
-
-
-
-
-
-hd = (
+# Drop columns, create dummy variables, and rename columns
+hd = (    
     hd.drop("resting_bp", "cholesterol", "fasting_bs", "resting_ecg")
       .to_dummies(columns = ["sex", "chest_pain_type", "exercise_angina", 
                              "st_slope"])
       .rename(str.lower)
     )
 
+# Perform a train-test split
 hd_x_train, hd_x_test, hd_y_train, hd_y_test = train_test_split(
     hd.drop("heart_disease"), hd.select("heart_disease").to_series(), 
-    test_size = 0.20, random_state = 123
+    test_size = 0.2, random_state = 123
     )
 
+# Perform min-max scaling of the numeric variables 
 hd_scaler = MinMaxScaler()
-
 hd_x_train = hd_scaler.fit_transform(
     hd_x_train.select("age", "max_hr", "old_peak")
     )
 
+# Tune hyperparameters with cross-validation to find the best hyperparameters
 hd_best_hp = GridSearchCV(
     estimator = KNeighborsClassifier(),
     param_grid = {"n_neighbors": [19, 20, 21],
@@ -161,24 +151,17 @@ hd_best_hp = GridSearchCV(
     cv = KFold(n_splits = 5, shuffle = True, random_state = 123)
     ).fit(hd_x_train, hd_y_train).best_params_  
 
+# Fit the model to the training data
 hd_knn_fit = KNeighborsClassifier(
     n_neighbors = hd_best_hp["n_neighbors"], 
     weights = hd_best_hp["weights"], 
     metric = hd_best_hp["metric"]
     ).fit(hd_x_train, hd_y_train)
 
+# Perform min-max scaling of the numeric variables
 hd_x_test = hd_scaler.transform(
     hd_x_test.select("age", "max_hr", "old_peak")
     )
 
+# Get the accuracy on the test data
 round(hd_knn_fit.score(hd_x_test, hd_y_test), 2)
-         
-################################################################################
-import polars.selectors as cs
-correlations = pl.DataFrame({
-    "variable": [col for col in sp.select(cs.numeric()).columns if col != "y"],
-    "correlation": [sp.select(pl.corr("y", col).abs()).item() 
-                    for col in sp.select(cs.numeric()).columns if col != "y"]
-    }).sort("correlation", descending = True).limit(5)
-top_five = correlations.get_column("variable").to_list()  
-################################################################################
