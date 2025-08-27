@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: August 25, 2025
+# Date: August 26, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -135,11 +135,9 @@ hd_x_train, hd_x_test, hd_y_train, hd_y_test = train_test_split(
     test_size = 0.2, random_state = 123
     )
 
-# Perform min-max scaling of the numeric variables 
+# Perform min-max scaling
 hd_scaler = MinMaxScaler()
-hd_x_train = hd_scaler.fit_transform(
-    hd_x_train.select("age", "max_hr", "old_peak")
-    )
+hd_x_train = hd_scaler.fit_transform(hd_x_train)
 
 # Tune hyperparameters with cross-validation to find the best hyperparameters
 hd_best_hp = GridSearchCV(
@@ -158,10 +156,8 @@ hd_knn_fit = KNeighborsClassifier(
     metric = hd_best_hp["metric"]
     ).fit(hd_x_train, hd_y_train)
 
-# Perform min-max scaling of the numeric variables
-hd_x_test = hd_scaler.transform(
-    hd_x_test.select("age", "max_hr", "old_peak")
-    )
+# Perform min-max scaling
+hd_x_test = hd_scaler.transform(hd_x_test)
 
 # Get the accuracy on the test data
 round(hd_knn_fit.score(hd_x_test, hd_y_test), 2)
