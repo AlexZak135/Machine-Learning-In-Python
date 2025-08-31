@@ -69,28 +69,30 @@ sns.scatterplot(x = "Age", y = "Spending Score", color = "black",
                 data = centroids, s = 100)
 plt.show()
 
-
-
-new_centroids = customers.groupby('cluster')[['Age', 'Spending Score']].mean().reset_index()
-new_centroids.drop('cluster', axis=1, inplace=True)
+new_centroids = (
+    customers.groupby("cluster")[["Age", "Spending Score"]].mean().reset_index()
+    ).drop("cluster", axis = 1)
 
 customers = calculate_distance_assign_clusters(customers, new_centroids)
 
-sns.scatterplot(x='Age', y='Spending Score', hue='cluster', palette='tab10', data=customers, s=50)
-sns.scatterplot(x='Age', y='Spending Score', color='black', data=new_centroids, s=100)
+sns.scatterplot(x = "Age", y = "Spending Score", hue = "cluster", 
+                palette = "tab10", data = customers, s = 50)
+sns.scatterplot(x = "Age", y = "Spending Score", color = "black", 
+                data = new_centroids, s = 100)
 plt.show()
 
-cols_to_keep = ['Age', 'Spending Score']
-
-customers = customers[cols_to_keep].copy()
+customers = customers[["Age", "Spending Score"]]
 
 def create_clusters(df):
-    centroids = df.sample(2)
+    centroids = df.sample(2, random_state = 123)
     df = calculate_distance_assign_clusters(df, centroids)
-    new_centroids = df.groupby('cluster')[['Age', 'Spending Score']].mean().reset_index()
-    new_centroids.drop('cluster', axis=1, inplace=True)
+    new_centroids = (
+        df.groupby("cluster")[["Age", "Spending Score"]].mean().reset_index()
+        )
+    new_centroids.drop("cluster", axis = 1)
     customers = calculate_distance_assign_clusters(df, new_centroids)
-    return df['cluster']
+    
+    return df["cluster"]
 
 clusters = create_clusters(customers)
-print(clusters)
+
