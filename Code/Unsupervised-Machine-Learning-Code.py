@@ -196,3 +196,60 @@ def kmeans(df, k, n_iterations = 100):
     return df["cluster"]
 
 clusters = kmeans(customers, 2)
+
+customers = pd.read_csv("Mall-Customers-Data.csv")
+customers = customers[["Annual Income", "Spending Score"]]
+
+def kmeans(df, k, n_iterations = 100):
+    variables = df.columns
+
+    centroids, coords = get_centroids(df, k)
+
+    for i in range(n_iterations):
+        last_coords = coords.copy() 
+        df, dists = calculate_distance(df, coords)
+        df["cluster"] = (
+            df[dists].idxmin(axis = 1).str.split("_").str[-1].astype(int)
+            )
+        centroids = round(df.groupby("cluster")[variables].mean(), 4)
+        coords = centroids.values.tolist()
+
+        if last_coords == coords:
+          	break
+        
+    df["sqrt_dist_centroid"] = df[dists].min(axis = 1) ** 2
+    inertia = df["sqrt_dist_centroid"].sum()
+    
+    print(f"Total Iterations: {i + 1}")
+
+    fig, ax = plt.subplots(figsize = (10, 5))
+    sns.scatterplot(x = variables[0], y = variables[1], hue = "cluster", 
+                    palette = "tab10", data = df, s = 50, ax = ax)
+    sns.scatterplot(x = variables[0], y = variables[1], color = "black", 
+                    data = centroids, s = 100, ax = ax)
+
+    plt.tight_layout()
+    plt.show()
+
+    return df["cluster"], inertia
+
+clusters, inertia = kmeans(customers, k = 2)
+print(clusters, inertia)
+
+inertias = []
+for k in range(1, 11):
+    clusters, inertia = kmeans(customers, k = k)
+    inertias.append(inertia)
+    
+print(inertias)
+
+inertias = [269981.27999999997, 184131.88502826, 106348.37306241, 
+            73679.78903966, 44448.45544817, 38718.38226857, 34918.93964226, 
+            30176.132287570003, 29068.11150443, 21063.88614989]
+
+plt.plot(range(1, 11), inertias, marker = "o")
+plt.show()
+
+customers = pd.read_csv("Mall-Customers-Data.csv")
+customers = customers[["Annual Income", "Spending Score"]]
+clusters, inertia = kmeans(customers, k = 5)
