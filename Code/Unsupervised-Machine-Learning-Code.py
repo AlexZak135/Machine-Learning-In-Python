@@ -1,7 +1,8 @@
 # Title: Unsupervised Machine Learning Module 
 # Author: Alexander Zakrzeski
-# Date: September 2, 2025
+# Date: September 3, 2025
 
+import numpy as np
 import os
 import pandas as pd
 
@@ -38,3 +39,29 @@ def plot_elbow_curve(df, max_clusters = 10):
   
 inertias = plot_elbow_curve(customers[["Annual Income", "Spending Score"]])
 print(inertias)
+
+customers = customers[["Annual Income", "Spending Score"]] 
+scaler = StandardScaler()
+scaler.fit(customers)
+customers = scaler.transform(customers)
+
+inertias = plot_elbow_curve(customers)
+print(inertias)
+
+customers = pd.read_csv("Mall-Customers-Data.csv")
+customers = customers.drop(columns = "CustomerID")
+customers["Gender"] = np.where(customers["Gender"] == "Male", 1, 0)
+
+scaler = StandardScaler()
+scaler.fit(customers)
+customers_scaled = scaler.transform(customers)
+
+inertias = plot_elbow_curve(customers_scaled)
+print(inertias)
+
+model = KMeans(n_clusters = 6, random_state = 123)
+clusters = model.fit_predict(customers_scaled)
+customers["Cluster"] = clusters + 1
+print(customers["Cluster"].value_counts())
+
+# 6 of 9
