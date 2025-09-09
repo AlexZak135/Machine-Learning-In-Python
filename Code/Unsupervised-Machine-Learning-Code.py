@@ -1,10 +1,58 @@
 # Title: Unsupervised Machine Learning Module 
 # Author: Alexander Zakrzeski
-# Date: September 5, 2025
+# Date: September 8, 2025
+
+import os
+import polars as pl
+
+os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
+
+customers = (
+    pl.read_csv("Customer-Segmentation-Data.csv")
+      .with_columns(
+          pl.when(pl.col("gender") == "M")
+            .then(1) 
+            .otherwise(0)
+            .alias("gender"), 
+          pl.when(pl.col("education_level") == "Uneducated")
+            .then(0)
+            .when(pl.col("education_level") == "High School")
+            .then(1)
+            .when(pl.col("education_level") == "College")
+            .then(2)
+            .when(pl.col("education_level") == "Graduate") 
+            .then(3) 
+            .when(pl.col("education_level") == "Post-Graduate") 
+            .then(4) 
+            .when(pl.col("education_level") == "Doctorate") 
+            .then(5) 
+          )
+      .to_dummies(columns = "marital_status")
+      .drop("marital_status")
+    )
+
+
+
 
 ################################################################################
+customer_id: unique identifier for each customer.
+age: customer age in years.
+gender: customer gender (M or F).
+dependent_count: number of dependents of each customer.
+education_level: level of education ("High School", "Graduate", etc.).
+marital_status: marital status ("Single", "Married", etc.).
+estimated_income: the estimated income for the customer projected by the data science team.
+months_on_book: time as a customer in months.
+total_relationship_count: number of times the customer contacted the company.
+months_inactive_12_mon: number of months the customer did not use the credit card in the last 12 months.
+credit_limit: customer's credit limit.
+total_trans_amount: the overall amount of money spent on the card by the customer.
+total_trans_count: the overall number of times the customer used the card.
+avg_utilization_ratio: daily average utilization ratio.
+################################################################################
+################################################################################
 import numpy as np
-import os
+
 import pandas as pd
 
 import matplotlib.pyplot as plt
@@ -13,7 +61,6 @@ import seaborn as sns
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
-os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
 
 customers = pd.read_csv("Mall-Customers-Data.csv")
 
