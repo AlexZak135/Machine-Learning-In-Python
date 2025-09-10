@@ -1,9 +1,11 @@
 # Title: Unsupervised Machine Learning Module 
 # Author: Alexander Zakrzeski
-# Date: September 8, 2025
+# Date: September 9, 2025
 
 import os
 import polars as pl
+
+from sklearn.preprocessing import StandardScaler
 
 os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
 
@@ -26,13 +28,45 @@ customers = (
             .then(4) 
             .when(pl.col("education_level") == "Doctorate") 
             .then(5) 
+            .alias("education_level")
           )
-      .to_dummies(columns = "marital_status")
-      .drop("marital_status")
+      .filter(pl.col("marital_status") != "Unknown")
+      .to_dummies("marital_status") 
+      .rename({"marital_status_Divorced": "divorced", 
+                "marital_status_Married": "married", 
+                "marital_status_Single": "single"})
     )
 
 
 
+
+
+
+
+
+
+
+import polars as pl
+from sklearn.preprocessing import StandardScaler
+num_cols = ["age", "income"] 
+
+df = pl.DataFrame({
+    "age": [25, 32, 47, 51, 62],
+    "income": [40000, 52000, 67000, 85000, 91000],
+    "gender_M": [1, 0, 1, 0, 1],
+    "gender_F": [0, 1, 0, 1, 0]
+})
+
+scaled = StandardScaler().fit_transform(df[num_cols].to_numpy())
+
+df_scaled = df.with_columns([
+    pl.Series(name, scaled[:, i]) for i, name in enumerate(num_cols)
+])
+
+print(df_scaled)
+
+
+4 of 7
 
 ################################################################################
 customer_id: unique identifier for each customer.
@@ -59,7 +93,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler
+
 
 
 customers = pd.read_csv("Mall-Customers-Data.csv")
