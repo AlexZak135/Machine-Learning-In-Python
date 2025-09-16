@@ -31,10 +31,9 @@ num_cols = ["age", "dependent_count", "estimated_income", "months_on_book",
             "credit_limit", "total_trans_amount", "total_trans_count", 
             "avg_utilization_ratio"]
 scaled = StandardScaler().fit_transform(customers[num_cols].to_numpy())
-df_scaled = df.with_columns([
+customers_scaled = customers.with_columns([
     pl.Series(name, scaled[:, i]) for i, name in enumerate(num_cols)
     ])
-
 
 
 
