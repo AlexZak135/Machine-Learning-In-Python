@@ -1,6 +1,6 @@
 # Title: Unsupervised Machine Learning Module 
 # Author: Alexander Zakrzeski
-# Date: September 9, 2025
+# Date: September 15, 2025
 
 import os
 import polars as pl
@@ -11,62 +11,32 @@ os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
 
 customers = (
     pl.read_csv("Customer-Segmentation-Data.csv")
-      .with_columns(
-          pl.when(pl.col("gender") == "M")
-            .then(1) 
-            .otherwise(0)
-            .alias("gender"), 
-          pl.when(pl.col("education_level") == "Uneducated")
-            .then(0)
-            .when(pl.col("education_level") == "High School")
-            .then(1)
-            .when(pl.col("education_level") == "College")
-            .then(2)
-            .when(pl.col("education_level") == "Graduate") 
-            .then(3) 
-            .when(pl.col("education_level") == "Post-Graduate") 
-            .then(4) 
-            .when(pl.col("education_level") == "Doctorate") 
-            .then(5) 
-            .alias("education_level")
-          )
       .filter(pl.col("marital_status") != "Unknown")
-      .to_dummies("marital_status") 
-      .rename({"marital_status_Divorced": "divorced", 
-                "marital_status_Married": "married", 
-                "marital_status_Single": "single"})
+      .to_dummies(["gender", "education_level", "marital_status"]) 
+      .rename({"gender_F": "female", 
+               "gender_M": "male",
+               "education_level_College": "college",
+               "education_level_Doctorate": "doctorate",
+               "education_level_Graduate": "graduate",
+               "education_level_High School": "high school",
+               "education_level_Post-Graduate": "post-graduate",
+               "education_level_Uneducated": "uneducated",
+               "marital_status_Divorced": "divorced", 
+               "marital_status_Married": "married", 
+               "marital_status_Single": "single"})
     )
 
-
-
-
-
-
-
-
-
-
-import polars as pl
-from sklearn.preprocessing import StandardScaler
-num_cols = ["age", "income"] 
-
-df = pl.DataFrame({
-    "age": [25, 32, 47, 51, 62],
-    "income": [40000, 52000, 67000, 85000, 91000],
-    "gender_M": [1, 0, 1, 0, 1],
-    "gender_F": [0, 1, 0, 1, 0]
-})
-
-scaled = StandardScaler().fit_transform(df[num_cols].to_numpy())
-
+num_cols = ["age", "dependent_count", "estimated_income", "months_on_book", 
+            "total_relationship_count", "months_inactive_12_mon", 
+            "credit_limit", "total_trans_amount", "total_trans_count", 
+            "avg_utilization_ratio"]
+scaled = StandardScaler().fit_transform(customers[num_cols].to_numpy())
 df_scaled = df.with_columns([
     pl.Series(name, scaled[:, i]) for i, name in enumerate(num_cols)
-])
-
-print(df_scaled)
+    ])
 
 
-4 of 7
+
 
 ################################################################################
 customer_id: unique identifier for each customer.
