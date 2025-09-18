@@ -1,6 +1,6 @@
 # Title: Unsupervised Machine Learning Module 
 # Author: Alexander Zakrzeski
-# Date: September 16, 2025
+# Date: September 17, 2025
 
 import os
 import polars as pl
@@ -56,26 +56,17 @@ def plot_elbow_curve(df, max_clusters):
     
     return inertias
 
-plot_elbow_curve(customers_scaled.select("age", "estimated_income", 
-                                         "credit_limit", "total_trans_amount", 
-                                         "avg_utilization_ratio"), 10)
-plot_elbow_curve(customers_scaled.select("total_relationship_count", 
-                                         "months_inactive_12_mon", 
-                                         "total_trans_amount", 
-                                         "total_trans_count", 
-                                         "avg_utilization_ratio"), 10)
-plot_elbow_curve(customers_scaled.select("dependent_count", "estimated_income",
-                                         "months_on_book", "credit_limit", 
-                                         "avg_utilization_ratio"), 10)
+plot_elbow_curve(customers_scaled.drop("customer_id"), 10)
+
+customers = customers.with_columns(
+    pl.Series("cluster", 
+              (KMeans(n_clusters = 4, random_state = 123)
+               .fit_predict(customers_scaled.drop("customer_id"))) + 1)
+    )
+    
 
 
-
-
-
-
-
-
-
+# Test Correlations
 ################################################################################
 customer_id: unique identifier for each customer.
 age: customer age in years.
@@ -98,14 +89,6 @@ avg_utilization_ratio: daily average utilization ratio.
 
 import seaborn as sns
 
-
-
-
-inertias = plot_elbow_curve(customers_scaled)
-
-model = KMeans(n_clusters = 6, random_state = 123)
-clusters = model.fit_predict(customers_scaled)
-customers["Cluster"] = clusters + 1
 print(customers["Cluster"].value_counts())
 
 fig = plt.figure(figsize = (20, 10))
