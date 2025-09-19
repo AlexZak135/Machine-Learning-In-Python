@@ -1,13 +1,16 @@
 # Title: Unsupervised Machine Learning Module 
 # Author: Alexander Zakrzeski
-# Date: September 17, 2025
+# Date: September 18, 2025
 
+import numpy as np
 import os
 import polars as pl
 
 import matplotlib.pyplot as plt
+from matplotlib.ticker import StrMethodFormatter
 
 from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
 
 os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
@@ -29,10 +32,23 @@ customers = (
                "marital_status_Single": "single"})
     )
 
-num_cols = ["age", "dependent_count", "estimated_income", "months_on_book", 
+correlations = (
+    customers.select("age", "dependent_count", "estimated_income", 
+                     "months_on_book", "total_relationship_count", 
+                     "months_inactive_12_mon", "credit_limit", 
+                     "total_trans_amount", "total_trans_count", 
+                     "avg_utilization_ratio")
+             .to_pandas()
+             .corr()
+             .reset_index()
+             .rename(columns = {"index": "variable"})
+    )
+
+customers = customers.drop("months_on_book", "total_trans_count")
+
+num_cols = ["age", "dependent_count", "estimated_income", 
             "total_relationship_count", "months_inactive_12_mon", 
-            "credit_limit", "total_trans_amount", "total_trans_count", 
-            "avg_utilization_ratio"]
+            "credit_limit", "total_trans_amount", "avg_utilization_ratio"]
 scaled = StandardScaler().fit_transform(customers.select(num_cols))
 customers_scaled = customers.with_columns([
     pl.Series(name, scaled[:, i]) for i, name in enumerate(num_cols)
@@ -44,12 +60,13 @@ def plot_elbow_curve(df, max_clusters):
     for k in range(1, max_clusters + 1): 
         model = KMeans(n_clusters = k, random_state = 123)
         model.fit(df)
-        inertias.append(round(model.inertia_, 2)) 
+        inertias.append(round(model.inertia_, 2))
         
     plt.figure(figsize = (12, 8))
     plt.plot(range(1, max_clusters + 1), inertias, marker = "o") 
     plt.xticks(ticks = range(1, max_clusters + 1), 
                labels = range(1, max_clusters + 1))
+    plt.gca().yaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
     plt.title("Inertia vs. Number of Clusters")
     plt.tight_layout()
     plt.show()
@@ -66,21 +83,42 @@ customers = customers.with_columns(
     
 
 
-# Test Correlations
+
+
+
+
+X = customers_scaled.drop("customer_id").to_numpy()
+ks = range(2, 11)
+sil = []
+for k in ks:
+    labels = KMeans(n_clusters=k, random_state=123).fit_predict(X)
+    sil.append(silhouette_score(X, labels))
+k_sil = ks[int(np.argmax(sil))]
+print("Best k by Silhouette:", k_sil)
+
+
+
+
+sil = []
+for k in range(2, 11):
+    labels = KMeans(n_clusters=k, random_state=123).fit_predict(customers_scaled.drop("customer_id"))
+    sil.append(silhouette_score(customers_scaled.drop("customer_id"), labels))
+print("Best k by Silhouette:", ks[int(np.argmax(sil))])
+    
+    
+    
+
 ################################################################################
-customer_id: unique identifier for each customer.
 age: customer age in years.
 gender: customer gender (M or F).
 dependent_count: number of dependents of each customer.
 education_level: level of education ("High School", "Graduate", etc.).
 marital_status: marital status ("Single", "Married", etc.).
 estimated_income: the estimated income for the customer projected by the data science team.
-months_on_book: time as a customer in months.
 total_relationship_count: number of times the customer contacted the company.
 months_inactive_12_mon: number of months the customer did not use the credit card in the last 12 months.
 credit_limit: customer's credit limit.
 total_trans_amount: the overall amount of money spent on the card by the customer.
-total_trans_count: the overall number of times the customer used the card.
 avg_utilization_ratio: daily average utilization ratio.
 ################################################################################
 ################################################################################
