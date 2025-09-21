@@ -2,22 +2,26 @@
 # Author: Alexander Zakrzeski
 # Date: September 21, 2025
 
+# Load to import, clean, and wrangle data
 import numpy as np
 import os
 import polars as pl
 
+# Load to visualize data
 import matplotlib.pyplot as plt
 from matplotlib.ticker import StrMethodFormatter
 
+# Load to preprocess, perform, and evaluate clustering
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
 
+# Set the working directory
 os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
 
+# Load the data from the CSV file, filter, create new columns, and drop columns
 customers = (
     pl.read_csv("Customer-Segmentation-Data.csv")
-      .filter(pl.col("marital_status") != "Unknown")
       .with_columns(
           pl.when(pl.col("gender") == "M") 
             .then(1)
@@ -27,16 +31,13 @@ customers = (
                                                    "Doctorate"]))
             .then(1)
             .otherwise(0)
-            .alias("college_degree"),
-          pl.when(pl.col("marital_status") == "Married")
-            .then(1)
-            .otherwise(0)
-            .alias("married")
+            .alias("college_degree")  
           )
       .drop("gender", "dependent_count", "education_level", "marital_status", 
-            "total_relationship_count")       
+            "total_relationship_count")         
     )
-     
+ 
+# Select columns, convert to a Pandas DataFrame, and calculate correlations    
 correlations = (
     customers.select("age", "estimated_income", "months_on_book", 
                      "months_inactive_12_mon", "credit_limit", 
@@ -44,10 +45,17 @@ correlations = (
                      "avg_utilization_ratio")
              .to_pandas()
              .corr()
+             # Reset index, rename a column, and convert to a Polars DataFrame
              .reset_index()
-             .rename(columns = {"index": "variable"})
+             .rename(columns = {"index": "variable"})            
+             .pipe(pl.from_pandas)
     )
 
+
+
+
+
+# Drop columns and standardize the numeric variables
 customers = customers.drop("months_on_book", "total_trans_count")
 
 num_cols = ["age", "estimated_income", "months_inactive_12_mon", "credit_limit", 
@@ -184,9 +192,9 @@ Mean Married (Proportion married and not married) -  0.47
 age: customer age in years.
 male: 1 for male and 0 for female
 college_degree: 1 for college degree and 0 for no degree
-married: 1 for married and 0 for not married
 estimated_income: the estimated income for the customer projected by the data science team.
 months_inactive_12_mon: number of months the customer did not use the credit card in the last 12 months.
 credit_limit: customer's credit limit.
 total_trans_amount: the overall amount of money spent on the card by the customer.
 avg_utilization_ratio: daily average utilization ratio.
+################################################################################
