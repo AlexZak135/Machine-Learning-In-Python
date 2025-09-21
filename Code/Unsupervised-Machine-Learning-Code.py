@@ -1,6 +1,6 @@
 # Title: Unsupervised Machine Learning Module 
 # Author: Alexander Zakrzeski
-# Date: September 20, 2025
+# Date: September 21, 2025
 
 import numpy as np
 import os
@@ -18,23 +18,27 @@ os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
 customers = (
     pl.read_csv("Customer-Segmentation-Data.csv")
       .filter(pl.col("marital_status") != "Unknown")
-      .to_dummies(["gender", "education_level", "marital_status"]) 
-      .rename({"gender_F": "female", 
-               "gender_M": "male",
-               "education_level_College": "college",
-               "education_level_Doctorate": "doctorate",
-               "education_level_Graduate": "graduate",
-               "education_level_High School": "high school",
-               "education_level_Post-Graduate": "post-graduate",
-               "education_level_Uneducated": "uneducated",
-               "marital_status_Divorced": "divorced", 
-               "marital_status_Married": "married", 
-               "marital_status_Single": "single"})
+      .with_columns(
+          pl.when(pl.col("gender") == "M") 
+            .then(1)
+            .otherwise(0)
+            .alias("male"),
+          pl.when(pl.col("education_level").is_in(["Graduate", "Post-Graduate", 
+                                                   "Doctorate"]))
+            .then(1)
+            .otherwise(0)
+            .alias("college_degree"),
+          pl.when(pl.col("marital_status") == "Married")
+            .then(1)
+            .otherwise(0)
+            .alias("married")
+          )
+      .drop("gender", "dependent_count", "education_level", "marital_status", 
+            "total_relationship_count")       
     )
-
+     
 correlations = (
-    customers.select("age", "dependent_count", "estimated_income", 
-                     "months_on_book", "total_relationship_count", 
+    customers.select("age", "estimated_income", "months_on_book", 
                      "months_inactive_12_mon", "credit_limit", 
                      "total_trans_amount", "total_trans_count", 
                      "avg_utilization_ratio")
@@ -46,9 +50,8 @@ correlations = (
 
 customers = customers.drop("months_on_book", "total_trans_count")
 
-num_cols = ["age", "dependent_count", "estimated_income", 
-            "total_relationship_count", "months_inactive_12_mon", 
-            "credit_limit", "total_trans_amount", "avg_utilization_ratio"]
+num_cols = ["age", "estimated_income", "months_inactive_12_mon", "credit_limit", 
+            "total_trans_amount", "avg_utilization_ratio"]
 scaled = StandardScaler().fit_transform(customers.select(num_cols))
 customers_scaled = customers.with_columns([
     pl.Series(name, scaled[:, i]) for i, name in enumerate(num_cols)
@@ -92,21 +95,98 @@ customers = customers.with_columns(
               (KMeans(n_clusters = 4, random_state = 123) 
                .fit_predict(customers_scaled.drop("customer_id"))) + 1)
     )
- 
-print(customers.select(pl.col("cluster").value_counts()))   
+
+print(customers.select(pl.col("cluster").value_counts(normalize = True)))   
+
+for col in customers.drop("customer_id", "cluster").columns:
+    print(customers.group_by("cluster").agg(pl.mean(col)).sort("cluster"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+Okay, I want to provide a label to each of my clusters. I own a credit card 
+company, and I segmented my customers using k-means. Here is a summary of each
+cluster based on the input variables, and please assign a phrase that best fits
+each cluster. Also, here is a data dictionary.
+Age: customer age in years.
+estimated_income: the estimated income for the customer projected by the data 
+                   science team.
+months_inactive_12_mon: number of months the customer did not use the credit 
+                        card in the last 12 months.
+total_trans_amount: the overall amount of money spent on the card by the 
+                    customer.
+avg_utilization_ratio: daily average utilization ratio.
+male: 1 for male and 0 for female
+college_degree: 1 for college degree and 0 for no degree
+married: 1 for married and 0 for not married
+
+Cluster 1:
+Mean Age - 47
+Mean Estimated Income - 117,329
+Mean Months Inactive 12 Months - 2.3 
+Mean Credit Limit - 23,560
+Mean Total Trans Amount - 5,367 
+Mean Avg Utilization Ratio - 0.07
+Mean Male (Proportion male and not female) - 0.92 
+Mean College Degree (Proportion college degree and not college degree ) - 0.46
+Mean Married (Proportion married and not married) - 0.47  
+--------------------------------------------------------------------------------
+Cluster 2: 
+Mean Age - 52
+Mean Estimated Income - 54,522
+Mean Months Inactive 12 Months - 2.9
+Mean Credit Limit - 6,415
+Mean Total Trans Amount - 3,371
+Mean Avg Utilization Ratio - 0.14
+Mean Male (Proportion male and not female) - 0.43  
+Mean College Degree (Proportion college degree and not college degree ) - 0.49
+Mean Married (Proportion married and not married) - 0.52  
+--------------------------------------------------------------------------------
+Cluster 3: 
+Mean Age - 47
+Mean Estimated Income - 43,713
+Mean Months Inactive 12 Months - 2.3 
+Mean Credit Limit - 2,652
+Mean Total Trans Amount - 3,804
+Mean Avg Utilization Ratio - 0.65
+Mean Male (Proportion male and not female) - 0.24
+Mean College Degree (Proportion college degree and not college degree ) - 0.48
+Mean Married (Proportion married and not married) - 0.53  
+--------------------------------------------------------------------------------
+Cluster 4:
+Mean Age - 40
+Mean Estimated Income - 51,000 
+Mean Months Inactive 12 Months - 1.9
+Mean Credit Limit - 6,653
+Mean Total Trans Amount - 5,265
+Mean Avg Utilization Ratio - 0.15
+Mean Male (Proportion male and not female) - 0.45
+Mean College Degree (Proportion college degree and not college degree ) - 0.48
+Mean Married (Proportion married and not married) -  0.47 
 
 
 
 ################################################################################
 age: customer age in years.
-gender: customer gender (M or F).
-dependent_count: number of dependents of each customer.
-education_level: level of education ("High School", "Graduate", etc.).
-marital_status: marital status ("Single", "Married", etc.).
+male: 1 for male and 0 for female
+college_degree: 1 for college degree and 0 for no degree
+married: 1 for married and 0 for not married
 estimated_income: the estimated income for the customer projected by the data science team.
-total_relationship_count: number of times the customer contacted the company.
 months_inactive_12_mon: number of months the customer did not use the credit card in the last 12 months.
 credit_limit: customer's credit limit.
 total_trans_amount: the overall amount of money spent on the card by the customer.
 avg_utilization_ratio: daily average utilization ratio.
-################################################################################
