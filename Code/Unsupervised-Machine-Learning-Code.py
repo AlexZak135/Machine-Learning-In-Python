@@ -1,6 +1,6 @@
 # Title: Unsupervised Machine Learning Module 
 # Author: Alexander Zakrzeski
-# Date: September 21, 2025
+# Date: September 22, 2025
 
 # Load to import, clean, and wrangle data
 import numpy as np
@@ -18,6 +18,10 @@ from sklearn.preprocessing import StandardScaler
 
 # Set the working directory
 os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
+
+# Part 1: K-Means
+
+# Section 1.1: Data Preprocessing
 
 # Load the data from the CSV file, filter, create new columns, and drop columns
 customers = (
@@ -51,10 +55,6 @@ correlations = (
              .pipe(pl.from_pandas)
     )
 
-
-
-
-
 # Drop columns and standardize the numeric variables
 customers = customers.drop("months_on_book", "total_trans_count")
 
@@ -62,8 +62,13 @@ num_cols = ["age", "estimated_income", "months_inactive_12_mon", "credit_limit",
             "total_trans_amount", "avg_utilization_ratio"]
 scaled = StandardScaler().fit_transform(customers.select(num_cols))
 customers_scaled = customers.with_columns([
-    pl.Series(name, scaled[:, i]) for i, name in enumerate(num_cols)
+    pl.Series(col_name, scaled[:, i]) for i, col_name in enumerate(num_cols)
     ])
+
+
+
+
+
 
 def plot_elbow_curve(df, max_clusters):
     inertias = [] 

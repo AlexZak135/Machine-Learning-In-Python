@@ -119,7 +119,7 @@ hd_num_results = pl.DataFrame({
           .alias("variable") 
      ).sort("correlation", descending = True)
 
-# Part 4: Machine Learning Model
+# Section 1.3: Machine Learning Model
 
 # Drop columns, create dummy variables, and rename columns
 hd = (    
