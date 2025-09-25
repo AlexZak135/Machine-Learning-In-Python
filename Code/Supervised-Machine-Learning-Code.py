@@ -166,3 +166,5 @@ round(hd_knn_fit.score(hd_x_test, hd_y_test), 2)
 # Section 2.1: Data Preprocessing
 # Section 2.2: Exploratory Data Analysis
 # Section 2.3: Machine Learning Model
+
+auto = pl.read_csv("Automobiles-Data.csv")
