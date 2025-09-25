@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: August 26, 2025
+# Date: September 24, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -161,3 +161,8 @@ hd_x_test = hd_scaler.transform(hd_x_test)
 
 # Get the accuracy on the test data
 round(hd_knn_fit.score(hd_x_test, hd_y_test), 2)
+
+# Part 2: Linear Regression
+# Section 2.1: Data Preprocessing
+# Section 2.2: Exploratory Data Analysis
+# Section 2.3: Machine Learning Model

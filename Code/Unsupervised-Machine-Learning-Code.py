@@ -25,7 +25,7 @@ os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
 
 # Load the data from the CSV file, filter, create new columns, and drop columns
 customers = (
-    pl.read_csv("Customer-Segmentation-Data.csv")
+    pl.read_csv("Credit-Cards-Data.csv")
       .with_columns(
           pl.when(pl.col("gender") == "M") 
             .then(1)
