@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: September 24, 2025
+# Date: September 25, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -167,4 +167,18 @@ round(hd_knn_fit.score(hd_x_test, hd_y_test), 2)
 # Section 2.2: Exploratory Data Analysis
 # Section 2.3: Machine Learning Model
 
-auto = pl.read_csv("Automobiles-Data.csv")
+auto = (
+    pl.read_csv("Automobiles-Data.csv")
+      .to_dummies(columns = "drive_wheels", drop_first = True)
+      )
+
+auto_x_train, auto_x_test, auto_y_train, auto_y_test = train_test_split(
+    auto.drop("normalized_losses"), 
+    auto.select("normalized_losses").to_series(), 
+    test_size = 0.2, random_state = 123 
+    )
+
+
+
+
+# 5 of 7 · The Cost Function
