@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: September 25, 2025
+# Date: September 26, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -12,6 +12,7 @@ from dython.nominal import associations
 from scipy.stats import chi2_contingency
 
 # Load to train, test, and evaluate machine learning models
+from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import GridSearchCV, KFold, train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler
@@ -178,7 +179,13 @@ auto_x_train, auto_x_test, auto_y_train, auto_y_test = train_test_split(
     test_size = 0.2, random_state = 123 
     )
 
+beta0 = 5
+beta1 = 3
+beta2 = 2
+se = (auto_y_train - 
+      (beta0 + 
+       (beta1 * auto_x_train.select("length").to_series()) + 
+       (beta2 * auto_x_train.select("engine_size").to_series()))) ** 2
+sse = sum(se)
 
-
-
-# 5 of 7 · The Cost Function
+lm = LinearRegression()
