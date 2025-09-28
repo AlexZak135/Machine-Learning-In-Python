@@ -168,9 +168,13 @@ round(hd_knn_fit.score(hd_x_test, hd_y_test), 2)
 # Section 2.2: Exploratory Data Analysis
 # Section 2.3: Machine Learning Model
 
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.metrics import r2_score, root_mean_squared_error
+
 auto = (
     pl.read_csv("Automobiles-Data.csv")
-      .to_dummies(columns = ["fuel_type", "drive_wheels"], drop_first = True)
+      .to_dummies(columns = "fuel_type", drop_first = True)
       )
 
 auto_x_train, auto_x_test, auto_y_train, auto_y_test = train_test_split(
@@ -190,7 +194,32 @@ sse = sum(se)
 
 lm = LinearRegression()
 
-lm.fit(auto_x_train.select("fuel_type_diesel", "length", "engine_size"), 
-       auto_y_train)
+lm.fit(auto_x_train.select("fuel_type_diesel", "length", "width", 
+                           "engine_size"), auto_y_train)
 lm.intercept_
 lm.coef_
+
+np.mean(auto_y_train.to_numpy() - 
+        lm.predict(auto_x_train.select("fuel_type_diesel", "length", "width", 
+                                       "engine_size")))
+
+plt.scatter(auto_y_train, 
+            auto_y_train - lm.predict(auto_x_train.select("fuel_type_diesel", 
+                                                          "length", "width", 
+                                                          "engine_size")))
+plt.show()
+
+plt.scatter(lm.predict(auto_x_train.select("fuel_type_diesel", "length", 
+                                           "width", "engine_size")), 
+            auto_y_train - lm.predict(auto_x_train.select("fuel_type_diesel", 
+                                                          "length", "width", 
+                                                          "engine_size")))          
+plt.show()
+
+root_mean_squared_error(auto_y_train, 
+                        lm.predict(auto_x_train.select("fuel_type_diesel", 
+                                                       "length", "width", 
+                                                       "engine_size")))
+r2_score(auto_y_train, lm.predict(auto_x_train.select("fuel_type_diesel", 
+                                                      "length", "width", 
+                                                      "engine_size")))
