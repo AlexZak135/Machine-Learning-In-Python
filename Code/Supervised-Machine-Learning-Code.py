@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: September 26, 2025
+# Date: September 28, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -170,7 +170,7 @@ round(hd_knn_fit.score(hd_x_test, hd_y_test), 2)
 
 auto = (
     pl.read_csv("Automobiles-Data.csv")
-      .to_dummies(columns = "drive_wheels", drop_first = True)
+      .to_dummies(columns = ["fuel_type", "drive_wheels"], drop_first = True)
       )
 
 auto_x_train, auto_x_test, auto_y_train, auto_y_test = train_test_split(
@@ -189,3 +189,8 @@ se = (auto_y_train -
 sse = sum(se)
 
 lm = LinearRegression()
+
+lm.fit(auto_x_train.select("fuel_type_diesel", "length", "engine_size"), 
+       auto_y_train)
+lm.intercept_
+lm.coef_
