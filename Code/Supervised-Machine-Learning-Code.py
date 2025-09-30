@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: September 28, 2025
+# Date: September 29, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -164,6 +164,52 @@ hd_x_test = hd_scaler.transform(hd_x_test)
 round(hd_knn_fit.score(hd_x_test, hd_y_test), 2)
 
 # Part 2: Linear Regression
+
 # Section 2.1: Data Preprocessing
+
 # Section 2.2: Exploratory Data Analysis
+
 # Section 2.3: Machine Learning Model
+
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+mc = pl.read_csv("Medical-Cost-Data.csv")
+mc = mc.with_columns(pl.col("charges").log().alias("log_charges"), 
+                     pl.when(pl.col("sex") == "male")
+                       .then(1)
+                       .otherwise(0)
+                       .alias("male"))
+
+# age
+plt.hist(mc.select("age"), bins = 20, edgecolor = "black")
+mc.select(pl.corr("age", "charges", method = "pearson")) # 0.30
+mc.select(pl.corr("age", "charges", method = "spearman")) # 0.53
+mc.select(pl.corr("age", "log_charges", method = "pearson")) # 0.53 - CHOOSE
+plt.scatter(mc.select("age"), mc.select("charges"))
+plt.scatter(mc.select("age"), mc.select("log_charges"))
+
+# sex
+mc.select(pl.corr("male", "charges", method = "pearson")) # 0.06
+mc.select(pl.corr("age", "log_charges", method = "pearson")) # 0.52 - CHOOSE
+sns.boxplot(x = "male", y = "charges", data = mc)
+sns.boxplot(x = "male", y = "log_charges", data = mc)
+
+# bmi
+plt.hist(mc.select("bmi"), bins = 20, edgecolor = "black")
+mc.select(pl.corr("bmi", "charges", method = "pearson")) # 0.20
+mc.select(pl.corr("bmi", "charges", method = "spearman")) # 0.12
+mc.select(pl.corr("bmi", "log_charges", method = "pearson")) # 0.13 - CHOOSE
+plt.scatter(mc.select("bmi"), mc.select("charges"))
+plt.scatter(mc.select("bmi"), mc.select("log_charges"))
+
+# children
+plt.hist(mc.select("children"), bins = 20, edgecolor = "black")
+mc.select(pl.corr("children", "charges", method = "pearson")) # 0.07
+mc.select(pl.corr("children", "charges", method = "spearman")) # 0.13
+mc.select(pl.corr("children", "log_charges", method = "pearson")) # 0.16 - CHOOSE
+plt.scatter(mc.select("children"), mc.select("charges"))
+plt.scatter(mc.select("children"), mc.select("log_charges"))
+
+["age", "sex", "bmi", "children", "smoker", "region", "charges"]
