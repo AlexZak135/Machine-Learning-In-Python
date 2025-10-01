@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: September 29, 2025
+# Date: October 1, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -167,21 +167,49 @@ round(hd_knn_fit.score(hd_x_test, hd_y_test), 2)
 
 # Section 2.1: Data Preprocessing
 
+# Load the data from the CSV file
+mc = (
+    pl.read_csv("Medical-Cost-Data.csv")
+      # Create new columns and modify values of existing columns 
+      .with_columns(
+          pl.when(pl.col("sex") == "male")
+            .then(1)
+            .otherwise(0)
+            .alias("male"),
+          pl.when(pl.col("smoker") == "yes")
+            .then(1)
+            .otherwise(0)
+            .alias("smoker"),
+          pl.col("region").alias("region_orig"),
+          pl.col("charges").log().alias("log_charges")     
+     ).to_dummies("region")
+      # Rename columns and select columns in the appropriate order
+      .rename({"region_northeast": "northeast", 
+               "region_northwest": "northwest", 
+               "region_southeast": "southeast", 
+               "region_southwest": "southwest", 
+               "region_orig": "region"})
+      .select("age", "male", "bmi", "children", "smoker", "region", "northwest", 
+              "southeast", "southwest", "charges", "log_charges")  
+    )
+
 # Section 2.2: Exploratory Data Analysis
+
+
+
+
+################################################################################
 
 # Section 2.3: Machine Learning Model
 
 
 import matplotlib.pyplot as plt
 import seaborn as sns
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
 
-mc = pl.read_csv("Medical-Cost-Data.csv")
-mc = mc.with_columns(pl.col("charges").log().alias("log_charges"), 
-                     pl.when(pl.col("sex") == "male")
-                       .then(1)
-                       .otherwise(0)
-                       .alias("male"))
-
+ 
 # age
 plt.hist(mc.select("age"), bins = 20, edgecolor = "black")
 mc.select(pl.corr("age", "charges", method = "pearson")) # 0.30
@@ -191,16 +219,16 @@ plt.scatter(mc.select("age"), mc.select("charges"))
 plt.scatter(mc.select("age"), mc.select("log_charges"))
 
 # sex
-mc.select(pl.corr("male", "charges", method = "pearson")) # 0.06
-mc.select(pl.corr("age", "log_charges", method = "pearson")) # 0.52 - CHOOSE
+mc.select(pl.corr("male", "charges", method = "pearson")) # 0.06 - CHOOSE
+mc.select(pl.corr("male", "log_charges", method = "pearson")) # 0.01 
 sns.boxplot(x = "male", y = "charges", data = mc)
 sns.boxplot(x = "male", y = "log_charges", data = mc)
 
 # bmi
 plt.hist(mc.select("bmi"), bins = 20, edgecolor = "black")
-mc.select(pl.corr("bmi", "charges", method = "pearson")) # 0.20
+mc.select(pl.corr("bmi", "charges", method = "pearson")) # 0.20 - CHOOSE
 mc.select(pl.corr("bmi", "charges", method = "spearman")) # 0.12
-mc.select(pl.corr("bmi", "log_charges", method = "pearson")) # 0.13 - CHOOSE
+mc.select(pl.corr("bmi", "log_charges", method = "pearson")) # 0.13 
 plt.scatter(mc.select("bmi"), mc.select("charges"))
 plt.scatter(mc.select("bmi"), mc.select("log_charges"))
 
@@ -211,5 +239,28 @@ mc.select(pl.corr("children", "charges", method = "spearman")) # 0.13
 mc.select(pl.corr("children", "log_charges", method = "pearson")) # 0.16 - CHOOSE
 plt.scatter(mc.select("children"), mc.select("charges"))
 plt.scatter(mc.select("children"), mc.select("log_charges"))
+
+# smoker
+mc.select(pl.corr("smoker", "charges", method = "pearson")) # 0.79 - CHOOSE
+mc.select(pl.corr("smoker", "charges", method = "spearman")) # 0.66
+sns.boxplot(x = "smoker", y = "charges", data = mc)
+sns.boxplot(x = "smoker", y = "log_charges", data = mc)
+
+# region
+mc.group_by("region").agg(pl.mean("charges"))
+mc.group_by("region").agg(pl.len())
+
+
+mc_pd = mc.to_pandas()
+for column in ["region"]:    
+    print(f"\nOutputs for {column}:\n\n", 
+          sm.stats.anova_lm(ols(f"charges ~ {column}",    
+                                data = mc_pd).fit(), typ = 1), "\n\n", 
+          pairwise_tukeyhsd(mc_pd["charges"], mc_pd[column]), "\n")
+for column in ["region"]:    
+    print(f"\nOutputs for {column}:\n\n", 
+          sm.stats.anova_lm(ols(f"log_charges ~ {column}",    
+                                data = mc_pd).fit(), typ = 1), "\n\n", 
+          pairwise_tukeyhsd(mc_pd["log_charges"], mc_pd[column]), "\n")
 
 ["age", "sex", "bmi", "children", "smoker", "region", "charges"]
