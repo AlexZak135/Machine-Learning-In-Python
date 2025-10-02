@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: October 1, 2025
+# Date: October 2, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -236,11 +236,10 @@ mc_x_train, mc_x_test, mc_y_train, mc_y_test = train_test_split(
 # Fit the model to the training data
 mc_lr_fit = LinearRegression().fit(mc_x_train, mc_y_train)
 
-
 # Create a DataFrame containing the performance and error metrics
-mc_model_metrics = pl.DataFrame({
-    "Model": "Linear Regression", 
-    "R\u00b2": format(mc_lr_fit.score(mc_x_test, mc_y_test), ".3f"), 
+pl.DataFrame({
+    "Model": "Linear Regression",
+    "R\u00b2": format(mc_lr_fit.score(mc_x_test, mc_y_test), ".3f"),
     "RMSE": "$" + format(root_mean_squared_error(
         mc_y_test.exp(),
         pl.Series(mc_lr_fit.predict(mc_x_test)).exp() *
@@ -251,6 +250,4 @@ mc_model_metrics = pl.DataFrame({
         pl.Series(mc_lr_fit.predict(mc_x_test)).exp() *
         (mc_y_train - mc_lr_fit.predict(mc_x_train)).exp().mean()
         ), ",.0f") 
-    })    
-
-# Fix dataframe to DataFrame
+    })
