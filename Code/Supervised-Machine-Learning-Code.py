@@ -7,12 +7,15 @@ import os
 import pandas as pd
 import polars as pl
 
-# Load to analyze associations and run statistical tests 
+# Load to analyze associations and run statistical tests
+import statsmodels.api as sm 
 from dython.nominal import associations
 from scipy.stats import chi2_contingency
+from statsmodels.formula.api import ols
 
 # Load to train, test, and evaluate machine learning models
 from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, root_mean_squared_error
 from sklearn.model_selection import GridSearchCV, KFold, train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler
@@ -41,7 +44,7 @@ hd = (
               (pl.col("old_peak") >= 0))
     )
 
-# Change data types, select columns, and convert to a Pandas dataframe
+# Change data types, select columns, and convert to a Pandas DataFrame
 hd_cat = (
     hd.with_columns([
         pl.col(c).cast(pl.Utf8).alias(c) 
@@ -77,7 +80,7 @@ for col in ["sex", "chest_pain_type", "fasting_bs", "resting_ecg",
                            "p_value": p, 
                            "cramers_v": cramers_v})
 
-# Create a dataframe, modify values in a column, and sort rows    
+# Create a DataFrame, modify values in a column, and sort rows    
 hd_cat_results = (
     pl.DataFrame(hd_cat_results)
       .with_columns(
@@ -98,7 +101,7 @@ hd_cat_results = (
       .sort("cramers_v", descending = True)
     )
 
-# Create a dataframe and for each variable perform a correlation test
+# Create a DataFrame and for each variable perform a correlation test
 hd_num_results = pl.DataFrame({
     "variable": [col for col in ["age", "resting_bp", "cholesterol", "max_hr", 
                                  "old_peak"]],
@@ -195,72 +198,59 @@ mc = (
 
 # Section 2.2: Exploratory Data Analysis
 
+# Perform a one-way ANOVA
+sm.stats.anova_lm(ols(f"log_charges ~ region", data = mc.to_pandas()).fit(), 
+                  typ = 1)
 
+# Create a DataFrame and for each variable perform a correlation test
+mc_corr_results = pl.DataFrame({
+    "variable": [col for col in ["age", "male", "bmi", "children", "smoker"]],
+    "correlation": [mc.select(pl.corr(col, "log_charges").round(2)).item()
+                    for col in ["age", "male", "bmi", "children", "smoker"]]
+    # Modify values in a column and sort rows
+    }).with_columns(
+        pl.when(pl.col("variable") == "age")
+          .then(pl.lit("Age"))
+          .when(pl.col("variable") == "male")
+          .then(pl.lit("Male"))
+          .when(pl.col("variable") == "bmi")
+          .then(pl.lit("BMI"))
+          .when(pl.col("variable") == "children")
+          .then(pl.lit("Children"))
+          .when(pl.col("variable") == "smoker")
+          .then(pl.lit("Smoker"))
+          .alias("variable") 
+     ).sort("correlation", descending = True)
 
-
-################################################################################
+# Select columns that are used in the model
+mc = mc.select("age", "children", "smoker", "log_charges")
 
 # Section 2.3: Machine Learning Model
+       
+# Perform a train-test split
+mc_x_train, mc_x_test, mc_y_train, mc_y_test = train_test_split(
+    mc.drop("log_charges"), mc.select("log_charges").to_series(), 
+    test_size = 0.2, random_state = 123
+    )
+
+# Fit the model to the training data
+mc_lr_fit = LinearRegression().fit(mc_x_train, mc_y_train)
 
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-import statsmodels.api as sm
-from statsmodels.formula.api import ols
-from statsmodels.stats.multicomp import pairwise_tukeyhsd
+# Create a DataFrame containing the performance and error metrics
+mc_model_metrics = pl.DataFrame({
+    "Model": "Linear Regression", 
+    "R\u00b2": format(mc_lr_fit.score(mc_x_test, mc_y_test), ".3f"), 
+    "RMSE": "$" + format(root_mean_squared_error(
+        mc_y_test.exp(),
+        pl.Series(mc_lr_fit.predict(mc_x_test)).exp() *
+        (mc_y_train - mc_lr_fit.predict(mc_x_train)).exp().mean()
+        ), ",.0f"),
+    "MAE": "$" + format(mean_absolute_error(
+        mc_y_test.exp(),
+        pl.Series(mc_lr_fit.predict(mc_x_test)).exp() *
+        (mc_y_train - mc_lr_fit.predict(mc_x_train)).exp().mean()
+        ), ",.0f") 
+    })    
 
- 
-# age
-plt.hist(mc.select("age"), bins = 20, edgecolor = "black")
-mc.select(pl.corr("age", "charges", method = "pearson")) # 0.30
-mc.select(pl.corr("age", "charges", method = "spearman")) # 0.53
-mc.select(pl.corr("age", "log_charges", method = "pearson")) # 0.53 - CHOOSE
-plt.scatter(mc.select("age"), mc.select("charges"))
-plt.scatter(mc.select("age"), mc.select("log_charges"))
-
-# sex
-mc.select(pl.corr("male", "charges", method = "pearson")) # 0.06 - CHOOSE
-mc.select(pl.corr("male", "log_charges", method = "pearson")) # 0.01 
-sns.boxplot(x = "male", y = "charges", data = mc)
-sns.boxplot(x = "male", y = "log_charges", data = mc)
-
-# bmi
-plt.hist(mc.select("bmi"), bins = 20, edgecolor = "black")
-mc.select(pl.corr("bmi", "charges", method = "pearson")) # 0.20 - CHOOSE
-mc.select(pl.corr("bmi", "charges", method = "spearman")) # 0.12
-mc.select(pl.corr("bmi", "log_charges", method = "pearson")) # 0.13 
-plt.scatter(mc.select("bmi"), mc.select("charges"))
-plt.scatter(mc.select("bmi"), mc.select("log_charges"))
-
-# children
-plt.hist(mc.select("children"), bins = 20, edgecolor = "black")
-mc.select(pl.corr("children", "charges", method = "pearson")) # 0.07
-mc.select(pl.corr("children", "charges", method = "spearman")) # 0.13
-mc.select(pl.corr("children", "log_charges", method = "pearson")) # 0.16 - CHOOSE
-plt.scatter(mc.select("children"), mc.select("charges"))
-plt.scatter(mc.select("children"), mc.select("log_charges"))
-
-# smoker
-mc.select(pl.corr("smoker", "charges", method = "pearson")) # 0.79 - CHOOSE
-mc.select(pl.corr("smoker", "charges", method = "spearman")) # 0.66
-sns.boxplot(x = "smoker", y = "charges", data = mc)
-sns.boxplot(x = "smoker", y = "log_charges", data = mc)
-
-# region
-mc.group_by("region").agg(pl.mean("charges"))
-mc.group_by("region").agg(pl.len())
-
-
-mc_pd = mc.to_pandas()
-for column in ["region"]:    
-    print(f"\nOutputs for {column}:\n\n", 
-          sm.stats.anova_lm(ols(f"charges ~ {column}",    
-                                data = mc_pd).fit(), typ = 1), "\n\n", 
-          pairwise_tukeyhsd(mc_pd["charges"], mc_pd[column]), "\n")
-for column in ["region"]:    
-    print(f"\nOutputs for {column}:\n\n", 
-          sm.stats.anova_lm(ols(f"log_charges ~ {column}",    
-                                data = mc_pd).fit(), typ = 1), "\n\n", 
-          pairwise_tukeyhsd(mc_pd["log_charges"], mc_pd[column]), "\n")
-
-["age", "sex", "bmi", "children", "smoker", "region", "charges"]
+# Fix dataframe to DataFrame
