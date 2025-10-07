@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: October 2, 2025
+# Date: October 3, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -251,3 +251,66 @@ pl.DataFrame({
         (mc_y_train - mc_lr_fit.predict(mc_x_train)).exp().mean()
         ), ",.0f") 
     })
+
+# Part 3: Logistic Regression
+# Section 3.1: Data Preprocessing
+# Section 3.2: Exploratory Data Analysis
+# Section 3.3: Machine Learning Model
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+
+auto = pd.read_csv("automobiles.csv")
+
+auto["high_price"] = 0
+auto.loc[auto["price"] > 15000, "high_price"] = 1
+
+X = auto.drop(["price", "high_price"], axis = 1)
+y = auto["high_price"]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size = 0.20, random_state = 731
+    )
+
+auto.plot.scatter(x = "horsepower", y = "high_price")
+plt.show()
+
+beta0 = -7
+beta1 = 0.05
+
+auto["z"] = beta0 + beta1 * auto["horsepower"]
+auto["hz"] = 1 / (1 + np.exp(-auto["z"]))
+
+auto.plot.scatter(x = "z", y = "hz")
+plt.show()
+
+prob = np.mean(y_train)
+odds = prob / (1 - prob)
+
+auto["L"] = 0
+
+auto.loc[auto["high_price"] == 1, "L"] = -np.log(auto["hz"])
+auto.loc[auto["high_price"] == 0, "L"] = -np.log(1 - auto["hz"])
+
+loss = sum(auto["L"])
+
+model = LogisticRegression()
+X_sub = X_train[["horsepower"]]
+model.fit(X_sub, y_train)
+
+intercept = model.intercept_
+odds = np.exp(intercept)
+
+log_or = model.coef_[0,0]
+odds_ratio = np.exp(log_or)
+
+X_sub = X_train[["horsepower", "highway_mpg"]]
+model.fit(X_sub, y_train)
+
+horsepower_or = np.exp(model.coef_[0, 0])
+highway_mpg_or = np.exp(model.coef_[0, 1])
+
+model.predict_proba(X_sub)
