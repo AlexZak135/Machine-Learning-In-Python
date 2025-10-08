@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: October 3, 2025
+# Date: October 7, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -314,3 +314,24 @@ horsepower_or = np.exp(model.coef_[0, 0])
 highway_mpg_or = np.exp(model.coef_[0, 1])
 
 model.predict_proba(X_sub)
+
+X = X_train[["horsepower"]]
+model = LogisticRegression()
+model.fit(X, y_train)
+accuracy = model.score(X, y_train)
+
+predictions = model.predict(X)
+
+tp = sum((y_train == 1) & (predictions == 1))
+fn = sum((y_train == 1) & (predictions == 0))
+recall = tp / (tp + fn)
+
+tn = sum((y_train == 0) & (predictions == 0))
+fp = sum((y_train == 0) & (predictions == 1))
+specificity = tn / (tn + fp)
+
+tp = sum((y_train == 1) & predictions == 1)
+fp = sum((y_train == 0) & predictions == 1)
+precision = tp / (tp + fp)
+
+#6
