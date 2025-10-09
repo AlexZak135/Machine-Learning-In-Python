@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: October 7, 2025
+# Date: October 8, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -334,4 +334,30 @@ tp = sum((y_train == 1) & predictions == 1)
 fp = sum((y_train == 0) & predictions == 1)
 precision = tp / (tp + fp)
 
-# 6
+tn = sum((y_train == 0) & (predictions == 0))
+fn = sum((y_train == 1) & (predictions == 0))
+npv = tn / (tn + fn)
+
+X1 = X_train[["length", "horsepower"]]
+X2 = X_train[["stroke", "compression_ratio"]]
+
+X1_test = X_test[["length", "horsepower"]]
+X2_test = X_test[["stroke", "compression_ratio"]]
+
+model1 = LogisticRegression()
+model2 = LogisticRegression()
+
+model1.fit(X1, y_train)
+model2.fit(X2, y_train)
+
+test_accuracy1 = model1.score(X1_test, y_test)
+test_accuracy2 = model2.score(X2_test, y_test)
+
+summary = auto.groupby("high_price").agg(
+	{
+    	"horsepower": "mean",
+      	"width": "mean",
+        "stroke": "mean",
+        "compression_ratio": "mean"
+    }
+)
