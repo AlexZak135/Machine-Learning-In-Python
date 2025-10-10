@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: October 8, 2025
+# Date: October 9, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -29,7 +29,7 @@ os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
 
 # Load the data from the CSV file, rename columns, and filter
 hd = (
-    pl.read_csv("Heart-Disease-Data.csv")
+    pl.read_csv("Heart-Disease-1-Data.csv")
       .rename(str.lower)
       .rename({"chestpaintype": "chest_pain_type",
                "restingbp": "resting_bp",
@@ -262,6 +262,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import confusion_matrix
 
 auto = pd.read_csv("automobiles.csv")
 
@@ -361,3 +362,41 @@ summary = auto.groupby("high_price").agg(
         "compression_ratio": "mean"
     }
 )
+
+X1 = X_train[["horsepower"]]
+X2 = X_train[["horsepower", "compression_ratio"]]
+X3 = X_train[["horsepower", "compression_ratio", "city_mpg"]]
+
+X1_test = X_test[["horsepower"]]
+X2_test = X_test[["horsepower", "compression_ratio"]]
+X3_test = X_test[["horsepower", "compression_ratio", "city_mpg"]]
+
+model1 = LogisticRegression()
+model2 = LogisticRegression()
+model3 = LogisticRegression()
+
+model1.fit(X1, y_train)
+model2.fit(X2, y_train)
+model3.fit(X3, y_train)
+
+
+train_accuracies = [
+    model1.score(X1, y_train),
+    model2.score(X2, y_train),
+    model3.score(X3, y_train)
+]
+
+test_accuracies = [
+    model1.score(X1_test, y_test),
+    model2.score(X2_test, y_test),
+    model3.score(X3_test, y_test)
+]
+
+X1 = X_train[["engine_size", "horsepower"]]
+
+model =  LogisticRegression()
+model.fit(X1, y_train)
+
+accuracy = model.score(X_test[["engine_size", "horsepower"]], y_test)
+test_predictions = model.predict(X_test[["engine_size", "horsepower"]])
+confusion = confusion_matrix(y_test, test_predictions)
