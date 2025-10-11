@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: October 9, 2025
+# Date: October 10, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -166,6 +166,9 @@ hd_x_test = hd_scaler.transform(hd_x_test)
 # Get the accuracy on the test data
 round(hd_knn_fit.score(hd_x_test, hd_y_test), 2)
 
+# Clear the global environment
+globals().clear()
+
 # Part 2: Linear Regression
 
 # Section 2.1: Data Preprocessing
@@ -252,11 +255,72 @@ pl.DataFrame({
         ), ",.0f") 
     })
 
+# Clear the global environment
+globals().clear()
+
 # Part 3: Logistic Regression
+
 # Section 3.1: Data Preprocessing
+
+hd = (
+    pl.read_csv("Heart-Disease-2-Data.csv", infer_schema_length = 175)
+      .rename({"sex": "male", 
+               "trestbps": "trest_bps", 
+               "restecg": "rest_ecg", 
+               "thalach": "thal_ach", 
+               "oldpeak": "old_peak"})
+      .filter(pl.col("age").is_between(35, 75))
+      .drop("") 
+    )
+
+hd_cat = hd.select("male") 
+
+hd_num = hd.select("age") 
+
+
+
+
+
 # Section 3.2: Exploratory Data Analysis
+
 # Section 3.3: Machine Learning Model
 
+
+["cp", "trest_bps", "chol", "fbs", "rest_ecg", "thal_ach", "exang", "old_peak", 
+ "slope", "ca", "thal", "present"]
+
+################################################################################
+# Load the data from the CSV file, rename columns, and filter
+hd = (
+    pl.read_csv("Heart-Disease-1-Data.csv")
+      .rename(str.lower)
+      .rename({"chestpaintype": "chest_pain_type",
+               "restingbp": "resting_bp",
+               "fastingbs": "fasting_bs",
+               "restingecg": "resting_ecg",
+               "maxhr": "max_hr",
+               "exerciseangina": "exercise_angina",
+               "oldpeak": "old_peak",
+               "heartdisease": "heart_disease"})
+      .filter(pl.col("age").is_between(35, 75) & (pl.col("resting_bp") >= 80) &
+              pl.col("cholesterol").is_between(100, 500) & 
+              (pl.col("old_peak") >= 0))
+    )
+
+# Change data types, select columns, and convert to a Pandas DataFrame
+hd_cat = (
+    hd.with_columns([
+        pl.col(c).cast(pl.Utf8).alias(c) 
+        for c in ["fasting_bs", "heart_disease"]
+        ])
+      .select(pl.col(pl.Utf8))
+      .to_pandas()
+    )
+
+# Select columns
+hd_num = hd.select("age", "resting_bp", "cholesterol", "max_hr", "old_peak", 
+                   "heart_disease")
+################################################################################
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -264,7 +328,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix
 
-auto = pd.read_csv("automobiles.csv")
+
 
 auto["high_price"] = 0
 auto.loc[auto["price"] > 15000, "high_price"] = 1
