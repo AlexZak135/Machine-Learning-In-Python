@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: October 10, 2025
+# Date: October 12, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -28,7 +28,7 @@ os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
 # Section 1.1: Data Preprocessing
 
 # Load the data from the CSV file, rename columns, and filter
-hd = (
+hd1 = (
     pl.read_csv("Heart-Disease-1-Data.csv")
       .rename(str.lower)
       .rename({"chestpaintype": "chest_pain_type",
@@ -45,44 +45,44 @@ hd = (
     )
 
 # Change data types, select columns, and convert to a Pandas DataFrame
-hd_cat = (
-    hd.with_columns([
+hd1_cat = (
+    hd1.with_columns([
         pl.col(c).cast(pl.Utf8).alias(c) 
         for c in ["fasting_bs", "heart_disease"]
         ])
-      .select(pl.col(pl.Utf8))
-      .to_pandas()
+       .select(pl.col(pl.Utf8))
+       .to_pandas()
     )
 
 # Select columns
-hd_num = hd.select("age", "resting_bp", "cholesterol", "max_hr", "old_peak", 
-                   "heart_disease")
+hd1_num = hd1.select("age", "resting_bp", "cholesterol", "max_hr", "old_peak", 
+                     "heart_disease")
 
 # Section 1.2: Exploratory Data Analysis
 
 # For each variable perform a chi-square test and then calculate Cramer's V
-hd_cat_results = []
+hd1_cat_results = []
 
 for col in ["sex", "chest_pain_type", "fasting_bs", "resting_ecg", 
             "exercise_angina", "st_slope"]:
     
     chi2, p, dof, expected = chi2_contingency(
-        pd.crosstab(hd_cat[col], hd_cat["heart_disease"])
+        pd.crosstab(hd1_cat[col], hd1_cat["heart_disease"])
         )    
     p = "<0.001" if p < 0.001 else str(round(p, 3))
     
     cramers_v = (
-        associations(hd_cat[[col, "heart_disease"]], compute_only = True) 
+        associations(hd1_cat[[col, "heart_disease"]], compute_only = True) 
         ["corr"].loc[col, "heart_disease"].round(2)
         )
     
-    hd_cat_results.append({"variable": col, 
-                           "p_value": p, 
-                           "cramers_v": cramers_v})
+    hd1_cat_results.append({"variable": col, 
+                            "p_value": p, 
+                            "cramers_v": cramers_v})
 
 # Create a DataFrame, modify values in a column, and sort rows    
-hd_cat_results = (
-    pl.DataFrame(hd_cat_results)
+hd1_cat_results = (
+    pl.DataFrame(hd1_cat_results)
       .with_columns(
           pl.when(pl.col("variable") == "sex")       
             .then(pl.lit("Sex"))
@@ -102,10 +102,10 @@ hd_cat_results = (
     )
 
 # Create a DataFrame and for each variable perform a correlation test
-hd_num_results = pl.DataFrame({
+hd1_num_results = pl.DataFrame({
     "variable": [col for col in ["age", "resting_bp", "cholesterol", "max_hr", 
                                  "old_peak"]],
-    "correlation": [hd.select(pl.corr(col, "heart_disease").round(2)).item() 
+    "correlation": [hd1.select(pl.corr(col, "heart_disease").round(2)).item() 
                     for col in ["age", "resting_bp", "cholesterol", "max_hr", 
                                 "old_peak"]]
     # Modify values in a column and sort rows  
@@ -126,48 +126,45 @@ hd_num_results = pl.DataFrame({
 # Section 1.3: Machine Learning Model
 
 # Drop columns, create dummy variables, and rename columns
-hd = (    
-    hd.drop("resting_bp", "cholesterol", "fasting_bs", "resting_ecg")
-      .to_dummies(columns = ["sex", "chest_pain_type", "exercise_angina", 
-                             "st_slope"])
+hd1 = (    
+    hd1.drop("resting_bp", "cholesterol", "fasting_bs", "resting_ecg")
+       .to_dummies(columns = ["sex", "chest_pain_type", "exercise_angina", 
+                              "st_slope"])
       .rename(str.lower)
     )
 
 # Perform a train-test split
-hd_x_train, hd_x_test, hd_y_train, hd_y_test = train_test_split(
-    hd.drop("heart_disease"), hd.select("heart_disease").to_series(), 
+hd1_x_train, hd1_x_test, hd1_y_train, hd1_y_test = train_test_split(
+    hd1.drop("heart_disease"), hd1.select("heart_disease").to_series(), 
     test_size = 0.2, random_state = 123
     )
 
 # Perform min-max scaling
-hd_scaler = MinMaxScaler()
-hd_x_train = hd_scaler.fit_transform(hd_x_train)
+hd1_scaler = MinMaxScaler()
+hd1_x_train = hd1_scaler.fit_transform(hd1_x_train)
 
 # Tune hyperparameters with cross-validation to find the best hyperparameters
-hd_best_hp = GridSearchCV(
+hd1_best_hp = GridSearchCV(
     estimator = KNeighborsClassifier(),
     param_grid = {"n_neighbors": [19, 20, 21],
                   "weights": ["distance", "uniform"],
                   "metric": ["euclidean", "manhattan"]},
     scoring = "accuracy",
     cv = KFold(n_splits = 5, shuffle = True, random_state = 123)
-    ).fit(hd_x_train, hd_y_train).best_params_  
+    ).fit(hd1_x_train, hd1_y_train).best_params_  
 
 # Fit the model to the training data
-hd_knn_fit = KNeighborsClassifier(
-    n_neighbors = hd_best_hp["n_neighbors"], 
-    weights = hd_best_hp["weights"], 
-    metric = hd_best_hp["metric"]
-    ).fit(hd_x_train, hd_y_train)
+hd1_knn_fit = KNeighborsClassifier(
+    n_neighbors = hd1_best_hp["n_neighbors"], 
+    weights = hd1_best_hp["weights"], 
+    metric = hd1_best_hp["metric"]
+    ).fit(hd1_x_train, hd1_y_train)
 
 # Perform min-max scaling
-hd_x_test = hd_scaler.transform(hd_x_test)
+hd1_x_test = hd1_scaler.transform(hd1_x_test)
 
 # Get the accuracy on the test data
-round(hd_knn_fit.score(hd_x_test, hd_y_test), 2)
-
-# Clear the global environment
-globals().clear()
+round(hd1_knn_fit.score(hd1_x_test, hd1_y_test), 2)
 
 # Part 2: Linear Regression
 
@@ -255,137 +252,53 @@ pl.DataFrame({
         ), ",.0f") 
     })
 
-# Clear the global environment
-globals().clear()
-
 # Part 3: Logistic Regression
 
 # Section 3.1: Data Preprocessing
 
-hd = (
+# Load the data from the CSV file, rename columns, filter, and change data types
+hd2 = (
     pl.read_csv("Heart-Disease-2-Data.csv", infer_schema_length = 175)
       .rename({"sex": "male", 
-               "trestbps": "trest_bps", 
+               "trestbps": "trest_bps",
                "restecg": "rest_ecg", 
                "thalach": "thal_ach", 
                "oldpeak": "old_peak"})
-      .filter(pl.col("age").is_between(35, 75))
-      .drop("") 
+      .filter(pl.col("age").is_between(35, 75) & (pl.col("chol") < 500) & 
+              (pl.col("ca") != "?") & (pl.col("thal") != "?"))
+      .with_columns([
+          pl.col(c).cast(pl.Utf8).alias(c)
+          for c in ["cp", "rest_ecg", "slope", "ca", "thal"]
+          ])
+      # Drop a column
+      .drop("")
     )
 
-hd_cat = hd.select("male") 
-
-hd_num = hd.select("age") 
-
-
-
-
-
-# Section 3.2: Exploratory Data Analysis
-
-# Section 3.3: Machine Learning Model
-
-
-["cp", "trest_bps", "chol", "fbs", "rest_ecg", "thal_ach", "exang", "old_peak", 
- "slope", "ca", "thal", "present"]
-
-################################################################################
-# Load the data from the CSV file, rename columns, and filter
-hd = (
-    pl.read_csv("Heart-Disease-1-Data.csv")
-      .rename(str.lower)
-      .rename({"chestpaintype": "chest_pain_type",
-               "restingbp": "resting_bp",
-               "fastingbs": "fasting_bs",
-               "restingecg": "resting_ecg",
-               "maxhr": "max_hr",
-               "exerciseangina": "exercise_angina",
-               "oldpeak": "old_peak",
-               "heartdisease": "heart_disease"})
-      .filter(pl.col("age").is_between(35, 75) & (pl.col("resting_bp") >= 80) &
-              pl.col("cholesterol").is_between(100, 500) & 
-              (pl.col("old_peak") >= 0))
-    )
-
-# Change data types, select columns, and convert to a Pandas DataFrame
-hd_cat = (
-    hd.with_columns([
-        pl.col(c).cast(pl.Utf8).alias(c) 
-        for c in ["fasting_bs", "heart_disease"]
+# Change data types, select columns, and convert to a Pandas DataFrame   
+hd2_cat = (
+    hd2.with_columns([
+        pl.col(c).cast(pl.Utf8).alias(c)
+        for c in ["male", "fbs", "exang", "present"]
         ])
-      .select(pl.col(pl.Utf8))
-      .to_pandas()
+       .select(pl.col(pl.Utf8))
+       .to_pandas() 
     )
 
 # Select columns
-hd_num = hd.select("age", "resting_bp", "cholesterol", "max_hr", "old_peak", 
-                   "heart_disease")
+hd2_num = hd2.select("age", "trest_bps", "chol", "thal_ach", "old_peak", 
+                     "present")    
+
+# Section 3.2: Exploratory Data Analysis
+
+
+
+# Section 3.3: Machine Learning Model
+
 ################################################################################
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
+################################################################################
+
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix
-
-
-
-auto["high_price"] = 0
-auto.loc[auto["price"] > 15000, "high_price"] = 1
-
-X = auto.drop(["price", "high_price"], axis = 1)
-y = auto["high_price"]
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size = 0.20, random_state = 731
-    )
-
-auto.plot.scatter(x = "horsepower", y = "high_price")
-plt.show()
-
-beta0 = -7
-beta1 = 0.05
-
-auto["z"] = beta0 + beta1 * auto["horsepower"]
-auto["hz"] = 1 / (1 + np.exp(-auto["z"]))
-
-auto.plot.scatter(x = "z", y = "hz")
-plt.show()
-
-prob = np.mean(y_train)
-odds = prob / (1 - prob)
-
-auto["L"] = 0
-
-auto.loc[auto["high_price"] == 1, "L"] = -np.log(auto["hz"])
-auto.loc[auto["high_price"] == 0, "L"] = -np.log(1 - auto["hz"])
-
-loss = sum(auto["L"])
-
-model = LogisticRegression()
-X_sub = X_train[["horsepower"]]
-model.fit(X_sub, y_train)
-
-intercept = model.intercept_
-odds = np.exp(intercept)
-
-log_or = model.coef_[0,0]
-odds_ratio = np.exp(log_or)
-
-X_sub = X_train[["horsepower", "highway_mpg"]]
-model.fit(X_sub, y_train)
-
-horsepower_or = np.exp(model.coef_[0, 0])
-highway_mpg_or = np.exp(model.coef_[0, 1])
-
-model.predict_proba(X_sub)
-
-X = X_train[["horsepower"]]
-model = LogisticRegression()
-model.fit(X, y_train)
-accuracy = model.score(X, y_train)
-
-predictions = model.predict(X)
 
 tp = sum((y_train == 1) & (predictions == 1))
 fn = sum((y_train == 1) & (predictions == 0))
@@ -403,52 +316,12 @@ tn = sum((y_train == 0) & (predictions == 0))
 fn = sum((y_train == 1) & (predictions == 0))
 npv = tn / (tn + fn)
 
-X1 = X_train[["length", "horsepower"]]
-X2 = X_train[["stroke", "compression_ratio"]]
-
-X1_test = X_test[["length", "horsepower"]]
-X2_test = X_test[["stroke", "compression_ratio"]]
-
-model1 = LogisticRegression()
-model2 = LogisticRegression()
-
-model1.fit(X1, y_train)
-model2.fit(X2, y_train)
-
-test_accuracy1 = model1.score(X1_test, y_test)
-test_accuracy2 = model2.score(X2_test, y_test)
-
-summary = auto.groupby("high_price").agg(
-	{
-    	"horsepower": "mean",
-      	"width": "mean",
-        "stroke": "mean",
-        "compression_ratio": "mean"
-    }
-)
-
-X1 = X_train[["horsepower"]]
-X2 = X_train[["horsepower", "compression_ratio"]]
 X3 = X_train[["horsepower", "compression_ratio", "city_mpg"]]
-
-X1_test = X_test[["horsepower"]]
-X2_test = X_test[["horsepower", "compression_ratio"]]
 X3_test = X_test[["horsepower", "compression_ratio", "city_mpg"]]
 
-model1 = LogisticRegression()
-model2 = LogisticRegression()
 model3 = LogisticRegression()
 
-model1.fit(X1, y_train)
-model2.fit(X2, y_train)
 model3.fit(X3, y_train)
-
-
-train_accuracies = [
-    model1.score(X1, y_train),
-    model2.score(X2, y_train),
-    model3.score(X3, y_train)
-]
 
 test_accuracies = [
     model1.score(X1_test, y_test),
