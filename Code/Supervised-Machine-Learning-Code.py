@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: October 12, 2025
+# Date: October 14, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -259,8 +259,7 @@ pl.DataFrame({
 # Load the data from the CSV file, rename columns, filter, and change data types
 hd2 = (
     pl.read_csv("Heart-Disease-2-Data.csv", infer_schema_length = 175)
-      .rename({"sex": "male", 
-               "trestbps": "trest_bps",
+      .rename({"trestbps": "trest_bps",
                "restecg": "rest_ecg", 
                "thalach": "thal_ach", 
                "oldpeak": "old_peak"})
@@ -278,7 +277,7 @@ hd2 = (
 hd2_cat = (
     hd2.with_columns([
         pl.col(c).cast(pl.Utf8).alias(c)
-        for c in ["male", "fbs", "exang", "present"]
+        for c in ["sex", "fbs", "exang", "present"]
         ])
        .select(pl.col(pl.Utf8))
        .to_pandas() 
@@ -290,11 +289,147 @@ hd2_num = hd2.select("age", "trest_bps", "chol", "thal_ach", "old_peak",
 
 # Section 3.2: Exploratory Data Analysis
 
+# For each variable perform a chi-square test and then calculate Cramer's V
+hd2_cat_results = []
+
+for col in ["sex", "cp", "fbs", "rest_ecg", "exang", "slope", "ca", "thal"]:
+    chi2, p, dof, expected = chi2_contingency(
+        pd.crosstab(hd2_cat[col], hd2_cat["present"])
+        )    
+    p = "<0.001" if p < 0.001 else str(round(p, 3))
+    
+    cramers_v = (
+        associations(hd2_cat[[col, "present"]], compute_only = True) 
+        ["corr"].loc[col, "present"].round(2)
+        )
+    
+    hd2_cat_results.append({"variable": col, 
+                            "p_value": p, 
+                            "cramers_v": cramers_v})
+
+# Create a DataFrame, modify values in a column, and sort rows 
+hd2_cat_results = (
+    pl.DataFrame(hd2_cat_results)
+      .with_columns(
+          pl.when(pl.col("variable") == "sex")       
+            .then(pl.lit("Sex"))
+            .when(pl.col("variable") == "cp")
+            .then(pl.lit("Chest Pain Type"))
+            .when(pl.col("variable") == "fbs")
+            .then(pl.lit("Fasting Blood Sugar"))
+            .when(pl.col("variable") == "rest_ecg")
+            .then(pl.lit("Resting ECG"))
+            .when(pl.col("variable") == "exang")
+            .then(pl.lit("Exercise Angina"))
+            .when(pl.col("variable") == "slope")
+            .then(pl.lit("ST Slope"))
+            .when(pl.col("variable") == "ca")
+            .then(pl.lit("Major Vessels"))
+            .when(pl.col("variable") == "thal")
+            .then(pl.lit("Thalassemia"))
+            .alias("variable")  
+          )
+      .sort("cramers_v", descending = True)
+    )
+
+
+
+# Create a DataFrame and for each variable perform a correlation test
+hd2_num_results = pl.DataFrame({
+    "variable": [col for col in []],
+    
+    
+    
+    "correlation": [hd2.select(pl.corr(col, "present").round(2)).item() 
+                    for col in []]
+    # Modify values in a column and sort rows  
+    }).with_columns(
+        pl.when(pl.col("variable") == "age")
+          .then(pl.lit("Age"))
+          .when(pl.col("variable") == "resting_bp")
+          .then(pl.lit("Resting Blood Pressure")) 
+          .when(pl.col("variable") == "cholesterol") 
+          .then(pl.lit("Cholesterol"))
+          .when(pl.col("variable") == "max_hr")
+          .then(pl.lit("Maximum Heart Rate"))
+          .when(pl.col("variable") == "old_peak")
+          .then(pl.lit("ST Depression")) 
+          .alias("variable") 
+     ).sort("correlation", descending = True)
+
+
+
+
 
 
 # Section 3.3: Machine Learning Model
 
 ################################################################################
+
+# Section 1.2: Exploratory Data Analysis
+
+# For each variable perform a chi-square test and then calculate Cramer's V
+hd1_cat_results = []
+
+for col in ["sex", "chest_pain_type", "fasting_bs", "resting_ecg", 
+            "exercise_angina", "st_slope"]:
+    
+    chi2, p, dof, expected = chi2_contingency(
+        pd.crosstab(hd1_cat[col], hd1_cat["heart_disease"])
+        )    
+    p = "<0.001" if p < 0.001 else str(round(p, 3))
+    
+    cramers_v = (
+        associations(hd1_cat[[col, "heart_disease"]], compute_only = True) 
+        ["corr"].loc[col, "heart_disease"].round(2)
+        )
+    
+    hd1_cat_results.append({"variable": col, 
+                            "p_value": p, 
+                            "cramers_v": cramers_v})
+
+# Create a DataFrame, modify values in a column, and sort rows    
+hd1_cat_results = (
+    pl.DataFrame(hd1_cat_results)
+      .with_columns(
+          pl.when(pl.col("variable") == "sex")       
+            .then(pl.lit("Sex"))
+            .when(pl.col("variable") == "chest_pain_type")
+            .then(pl.lit("Chest Pain Type"))
+            .when(pl.col("variable") == "fasting_bs")
+            .then(pl.lit("Fasting Blood Sugar"))
+            .when(pl.col("variable") == "resting_ecg")
+            .then(pl.lit("Resting ECG"))
+            .when(pl.col("variable") == "exercise_angina")
+            .then(pl.lit("Exercise Angina"))
+            .when(pl.col("variable") == "st_slope")
+            .then(pl.lit("ST Slope"))
+            .alias("variable")  
+          )
+      .sort("cramers_v", descending = True)
+    )
+
+# Create a DataFrame and for each variable perform a correlation test
+hd1_num_results = pl.DataFrame({
+    "variable": [col for col in ["age", "resting_bp", "cholesterol", "max_hr", 
+                                 "old_peak"]],
+    "correlation": [hd1.select(pl.corr(col, "heart_disease").round(2)).item() 
+                    for col in ["age", "resting_bp", "cholesterol", "max_hr", 
+                                "old_peak"]]
+    # Modify values in a column and sort rows  
+    }).with_columns(
+        pl.when(pl.col("variable") == "age")
+          .then(pl.lit("Age"))
+          .when(pl.col("variable") == "resting_bp")
+          .then(pl.lit("Resting Blood Pressure")) 
+          .when(pl.col("variable") == "cholesterol") 
+          .then(pl.lit("Cholesterol"))
+          .when(pl.col("variable") == "max_hr")
+          .then(pl.lit("Maximum Heart Rate"))
+          .when(pl.col("variable") == "old_peak")
+          .then(pl.lit("ST Depression")) 
+          .alias("variable") 
+     ).sort("correlation", descending = True)
 ################################################################################
 
 from sklearn.linear_model import LogisticRegression
