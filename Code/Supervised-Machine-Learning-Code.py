@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: October 15, 2025
+# Date: October 16, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -354,10 +354,24 @@ hd2_num_results = pl.DataFrame({
           .alias("variable")    
      ).sort("correlation", descending = True)
 
+# Drop columns, create dummy variables, rename columns, and drop columns
+hd2 = (
+    hd2.drop("age", "sex", "trest_bps", "chol", "fbs", "rest_ecg")
+       .to_dummies(columns = ["cp", "exang", "slope", "ca", "thal"], 
+                   drop_first = True)
+       .rename()
+       .drop()
+    )
 
 
-# Drop columns, standardize the numeric variables, and create dummy variables
-customers = customers.drop("months_on_book", "total_trans_count")
+
+
+
+
+
+# standardize the numeric variables
+
+
 
 num_cols = ["age", "estimated_income", "months_inactive_12_mon", "credit_limit", 
             "total_trans_amount", "avg_utilization_ratio"]
