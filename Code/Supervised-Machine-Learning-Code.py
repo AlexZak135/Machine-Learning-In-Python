@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: October 16, 2025
+# Date: October 17, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -354,72 +354,28 @@ hd2_num_results = pl.DataFrame({
           .alias("variable")    
      ).sort("correlation", descending = True)
 
-# Drop columns, create dummy variables, rename columns, and drop columns
+# Drop columns, create dummy variables, and rename columns
 hd2 = (
     hd2.drop("age", "sex", "trest_bps", "chol", "fbs", "rest_ecg")
        .to_dummies(columns = ["cp", "exang", "slope", "ca", "thal"], 
                    drop_first = True)
-       .rename()
-       .drop()
+       .rename({"ca_1.0": "ca_1", 
+                "ca_2.0": "ca_2", 
+                "ca_3.0": "ca_3", 
+                "thal_3.0": "thal_3", 
+                "thal_7.0": "thal_7"})
     )
 
-
-
-
-
-
-
-# standardize the numeric variables
-
-
-
-num_cols = ["age", "estimated_income", "months_inactive_12_mon", "credit_limit", 
-            "total_trans_amount", "avg_utilization_ratio"]
-scaled = StandardScaler().fit_transform(customers.select(num_cols))
-customers_scaled = customers.with_columns([
-    pl.Series(col_name, scaled[:, i]) for i, col_name in enumerate(num_cols)
+# Standardize the numeric variables
+hd2_scaled = StandardScaler().fit_transform(hd2.select("thal_ach", "old_peak"))
+hd2 = hd2.with_columns([
+    pl.Series(col_name, hd2_scaled[:, i]) 
+              for i, col_name in enumerate(["thal_ach", "old_peak"])
     ])
-
-
-# Drop columns, , and rename columns
-hd1 = (    
-    hd1.drop("resting_bp", "cholesterol", "fasting_bs", "resting_ecg")
-       .to_dummies(columns = ["sex", "chest_pain_type", "exercise_angina", 
-                              "st_slope"])
-      .rename(str.lower)
-    )
-
-
 
 # Section 3.3: Machine Learning Model
 
 ################################################################################
-
-
-
-
-
-# Create a DataFrame and for each variable perform a correlation test
-hd1_num_results = pl.DataFrame({
-    "variable": [col for col in ["age", "resting_bp", "cholesterol", "max_hr", 
-                                 "old_peak"]],
-    "correlation": [hd1.select(pl.corr(col, "heart_disease").round(2)).item() 
-                    for col in ["age", "resting_bp", "cholesterol", "max_hr", 
-                                "old_peak"]]
-    # Modify values in a column and sort rows  
-    }).with_columns(
-        pl.when(pl.col("variable") == "age")
-          .then(pl.lit("Age"))
-          .when(pl.col("variable") == "resting_bp")
-          .then(pl.lit("Resting Blood Pressure")) 
-          .when(pl.col("variable") == "cholesterol") 
-          .then(pl.lit("Cholesterol"))
-          .when(pl.col("variable") == "max_hr")
-          .then(pl.lit("Maximum Heart Rate"))
-          .when(pl.col("variable") == "old_peak")
-          .then(pl.lit("ST Depression")) 
-          .alias("variable") 
-     ).sort("correlation", descending = True)
 ################################################################################
 
 from sklearn.linear_model import LogisticRegression
