@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: October 17, 2025
+# Date: October 18, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -14,8 +14,11 @@ from scipy.stats import chi2_contingency
 from statsmodels.formula.api import ols
 
 # Load to train, test, and evaluate machine learning models
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_absolute_error, root_mean_squared_error
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.metrics import (accuracy_score, confusion_matrix, 
+                             ConfusionMatrixDisplay, f1_score, 
+                             mean_absolute_error, precision_score, recall_score,
+                             roc_auc_score, root_mean_squared_error)
 from sklearn.model_selection import GridSearchCV, KFold, train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
@@ -375,46 +378,31 @@ hd2 = hd2.with_columns([
 
 # Section 3.3: Machine Learning Model
 
-################################################################################
-################################################################################
+# Perform a train-test split
+hd2_x_train, hd2_x_test, hd2_y_train, hd2_y_test = train_test_split(
+    hd2.drop("present"), hd2.select("present").to_series(), 
+    test_size = 0.2, random_state = 123
+    )
 
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix
+# Fit the model to the training data
+hd2_logit_fit = LogisticRegression().fit(hd2_x_train, hd2_y_train)
 
-tp = sum((y_train == 1) & (predictions == 1))
-fn = sum((y_train == 1) & (predictions == 0))
-recall = tp / (tp + fn)
+# Get predictions of the model on the test data
+hd2_pred = hd2_logit_fit.predict(hd2_x_test)
 
-tn = sum((y_train == 0) & (predictions == 0))
-fp = sum((y_train == 0) & (predictions == 1))
-specificity = tn / (tn + fp)
+# Create a confusion matrix based on the predictions
+ConfusionMatrixDisplay(
+    confusion_matrix(hd2_y_test, hd2_logit_fit.predict(hd2_x_test)) 
+    ).plot(cmap = "Blues", colorbar = False)
 
-tp = sum((y_train == 1) & predictions == 1)
-fp = sum((y_train == 0) & predictions == 1)
-precision = tp / (tp + fp)
-
-tn = sum((y_train == 0) & (predictions == 0))
-fn = sum((y_train == 1) & (predictions == 0))
-npv = tn / (tn + fn)
-
-X3 = X_train[["horsepower", "compression_ratio", "city_mpg"]]
-X3_test = X_test[["horsepower", "compression_ratio", "city_mpg"]]
-
-model3 = LogisticRegression()
-
-model3.fit(X3, y_train)
-
-test_accuracies = [
-    model1.score(X1_test, y_test),
-    model2.score(X2_test, y_test),
-    model3.score(X3_test, y_test)
-]
-
-X1 = X_train[["engine_size", "horsepower"]]
-
-model =  LogisticRegression()
-model.fit(X1, y_train)
-
-accuracy = model.score(X_test[["engine_size", "horsepower"]], y_test)
-test_predictions = model.predict(X_test[["engine_size", "horsepower"]])
-confusion = confusion_matrix(y_test, test_predictions)
+# Create a DataFrame containing the performance metrics
+pl.DataFrame({
+    "Model": "Logistic Regression",
+    "Accuracy": format(accuracy_score(hd2_y_test, hd2_pred) * 100, ".0f") + "%",
+    "Precision": format(precision_score(hd2_y_test, hd2_pred) * 100, 
+                        ".0f") + "%", 
+    "Recall": format(recall_score(hd2_y_test, hd2_pred) * 100, ".0f") + "%", 
+    "F1 Score": format(f1_score(hd2_y_test, hd2_pred) * 100, ".0f") + "%",
+    "ROC AUC Score": format(roc_auc_score(hd2_y_test, hd2_pred) * 100, 
+                            ".0f") + "%"
+    })
