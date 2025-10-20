@@ -400,9 +400,14 @@ pl.DataFrame({
     "Model": "Logistic Regression",
     "Accuracy": format(accuracy_score(hd2_y_test, hd2_pred) * 100, ".0f") + "%",
     "Precision": format(precision_score(hd2_y_test, hd2_pred) * 100, 
-                        ".0f") + "%", 
-    "Recall": format(recall_score(hd2_y_test, hd2_pred) * 100, ".0f") + "%", 
+                        ".0f") + "%",
+    "Recall": format(recall_score(hd2_y_test, hd2_pred) * 100, ".0f") + "%",
     "F1 Score": format(f1_score(hd2_y_test, hd2_pred) * 100, ".0f") + "%",
     "ROC AUC Score": format(roc_auc_score(hd2_y_test, hd2_pred) * 100, 
                             ".0f") + "%"
     })
+
+# Part 4: Random Forest
+# Section 4.1: Data Preprocessing
+# Section 4.2: Exploratory Data Analysis
+# Section 4.3: Machine Learning Model
