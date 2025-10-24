@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: October 21, 2025
+# Date: October 24, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -411,15 +411,3 @@ pl.DataFrame({
 # Section 4.1: Data Preprocessing
 # Section 4.2: Exploratory Data Analysis
 # Section 4.3: Machine Learning Model
-
-from sklearn.preprocessing import OrdinalEncoder
-ordinal_famrel = [["Very Bad", "Bad", "Regular", "Good", "Excellent"]]
-df["famrel"] = OrdinalEncoder(categories = ordinal_famrel).fit_transform(df[["famrel"]])
-
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.compose import make_column_transformer
-parent_col_trans = make_column_transformer(
-    (OneHotEncoder(), ["guardian", "Mjob", "Fjob"]), 
-    remainder = "passthrough", verbose_feature_names_out = False)
-onehot_df = parent_col_trans.fit_transform(df)
-df = pd.DataFrame(onehot_df, columns = parent_col_trans.get_feature_names_out())
