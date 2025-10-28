@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: October 24, 2025
+# Date: October 27, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -407,7 +407,41 @@ pl.DataFrame({
                             ".0f") + "%"
     })
 
-# Part 4: Random Forest
-# Section 4.1: Data Preprocessing
-# Section 4.2: Exploratory Data Analysis
-# Section 4.3: Machine Learning Model
+# Part 5: Lasso Regression
+
+# Section 5.1: Data Preprocessing
+
+ff1 = (
+    pl.read_csv("Forest-Fires-Data.csv", infer_schema_length = 150)
+      .rename(str.lower)
+      .with_columns(
+          pl.when(pl.col("month").is_in(["jan", "feb", "dec"]))
+            .then(pl.lit("Winter"))
+            .when(pl.col("month").is_in(["mar", "apr", "may"]))
+            .then(pl.lit("Spring"))
+            .when(pl.col("month").is_in(["jun", "jul", "aug"]))
+            .then(pl.lit("Summer"))
+            .when(pl.col("month").is_in(["sep", "oct", "nov"]))
+            .then(pl.lit("Fall"))
+            .alias("season"),
+          pl.when(pl.col("day").is_in(["sat", "sun"]))
+            .then(1)
+            .otherwise(0)
+            .alias("Weekend"),
+          *[pl.when(pl.col(c) == "NA")
+              .then(None)
+              .otherwise(c)
+              .cast(pl.Float64)
+              .alias(c)
+            for c in ["ffmc", "dmc", "dc", "isi", "temp", "rh", "wind", "rain"]]  
+          )
+      .drop("", "x", "y", "month", "day")
+    )
+
+# Section 5.2: Exploratory Data Analysis
+# Section 5.3: Machine Learning Model
+
+# Part 5: Random Forest
+# Section 5.1: Data Preprocessing
+# Section 5.2: Exploratory Data Analysis
+# Section 5.3: Machine Learning Model
