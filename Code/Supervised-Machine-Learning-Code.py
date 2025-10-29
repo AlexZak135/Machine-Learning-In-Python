@@ -407,7 +407,7 @@ pl.DataFrame({
                             ".0f") + "%"
     })
 
-# Part 5: Random Forest
-# Section 5.1: Data Preprocessing
-# Section 5.2: Exploratory Data Analysis
-# Section 5.3: Machine Learning Model
+# Part 4: Random Forest
+# Section 4.1: Data Preprocessing
+# Section 4.2: Exploratory Data Analysis
+# Section 4.3: Machine Learning Model
