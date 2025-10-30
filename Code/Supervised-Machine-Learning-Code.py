@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: October 28, 2025
+# Date: October 29, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -407,7 +407,26 @@ pl.DataFrame({
                             ".0f") + "%"
     })
 
-# Part 4: Random Forest
+# Part 4: Lasso Regression
+
 # Section 4.1: Data Preprocessing
+
+wp1 = (
+    pl.read_csv("Worker-Productivity-Data.csv", infer_schema_length = 850)
+      .with_columns(
+          pl.col("date").str.slice(0, 1).alias("month"),
+          pl.when(pl.col("quarter") == "Quarter1")
+            .then(pl.lit("1"))
+            .when(pl.col("quarter") == "Quarter2")
+            .then(pl.lit("2"))
+            .when(pl.col("quarter") == "Quarter3")
+            .then(pl.lit("3"))
+            .when(pl.col("quarter").is_in(["Quarter4", "Quarter5"]))   
+            .then(pl.lit("4"))
+            .alias("quarter")
+          )
+      .drop("date")
+    )
+    
 # Section 4.2: Exploratory Data Analysis
 # Section 4.3: Machine Learning Model
