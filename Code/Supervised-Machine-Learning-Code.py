@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: October 29, 2025
+# Date: October 30, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -413,6 +413,8 @@ pl.DataFrame({
 
 wp1 = (
     pl.read_csv("Worker-Productivity-Data.csv", infer_schema_length = 850)
+      .filter(pl.col("targeted_productivity").is_between(0.35, 0.8) &
+              (pl.col("over_time") < 11_000) & (pl.col("no_of_workers") <= 60))
       .with_columns(
           pl.col("date").str.slice(0, 1).alias("month"),
           pl.when(pl.col("quarter") == "Quarter1")
@@ -423,10 +425,15 @@ wp1 = (
             .then(pl.lit("3"))
             .when(pl.col("quarter").is_in(["Quarter4", "Quarter5"]))   
             .then(pl.lit("4"))
-            .alias("quarter")
+            .alias("quarter"),
+          pl.when(pl.col("department").is_in(["finishing ", "finishing"]))
+            .then(pl.lit("Finishing"))
+            .when(pl.col("department") == "sweing")
+            .then(pl.lit("Sewing"))
+            .alias("department")  
           )
-      .drop("date")
+      .drop("date", "wip")
     )
-    
+ 
 # Section 4.2: Exploratory Data Analysis
 # Section 4.3: Machine Learning Model
