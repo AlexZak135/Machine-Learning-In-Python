@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: October 30, 2025
+# Date: November 1, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -411,12 +411,13 @@ pl.DataFrame({
 
 # Section 4.1: Data Preprocessing
 
+# Load the data from the CSV file, filter, and modify values of existing columns
 wp1 = (
     pl.read_csv("Worker-Productivity-Data.csv", infer_schema_length = 850)
-      .filter(pl.col("targeted_productivity").is_between(0.35, 0.8) &
-              (pl.col("over_time") < 11_000) & (pl.col("no_of_workers") <= 60))
+      .filter(pl.col("targeted_productivity").is_between(0.2, 0.8) & 
+              (pl.col("over_time") < 11_000) & 
+              (pl.col("no_of_workers").is_between(5, 60)))
       .with_columns(
-          pl.col("date").str.slice(0, 1).alias("month"),
           pl.when(pl.col("quarter") == "Quarter1")
             .then(pl.lit("1"))
             .when(pl.col("quarter") == "Quarter2")
@@ -426,13 +427,15 @@ wp1 = (
             .when(pl.col("quarter").is_in(["Quarter4", "Quarter5"]))   
             .then(pl.lit("4"))
             .alias("quarter"),
-          pl.when(pl.col("department").is_in(["finishing ", "finishing"]))
+          pl.when(pl.col("department").is_in(["finishing", "finishing "]))
             .then(pl.lit("Finishing"))
             .when(pl.col("department") == "sweing")
             .then(pl.lit("Sewing"))
-            .alias("department")  
+            .alias("department"),
+          pl.col("team").cast(pl.Utf8).alias("team")
           )
-      .drop("date", "wip")
+      # Drop the columns
+      .drop("date", "day", "wip")    
     )
  
 # Section 4.2: Exploratory Data Analysis
