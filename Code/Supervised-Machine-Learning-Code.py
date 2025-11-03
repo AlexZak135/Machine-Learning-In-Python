@@ -1,11 +1,14 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: November 1, 2025
+# Date: November 2, 2025
 
 # Load to import, clean, and wrangle data
 import os
 import pandas as pd
 import polars as pl
+
+# Load to visualize data
+import matplotlib.pyplot as plt
 
 # Load to analyze associations and run statistical tests
 import statsmodels.api as sm 
@@ -14,7 +17,7 @@ from scipy.stats import chi2_contingency
 from statsmodels.formula.api import ols
 
 # Load to train, test, and evaluate machine learning models
-from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.linear_model import Lasso, LinearRegression, LogisticRegression
 from sklearn.metrics import (accuracy_score, confusion_matrix, 
                              ConfusionMatrixDisplay, f1_score, 
                              mean_absolute_error, precision_score, recall_score,
@@ -373,7 +376,7 @@ hd2 = (
 hd2_scaled = StandardScaler().fit_transform(hd2.select("thal_ach", "old_peak"))
 hd2 = hd2.with_columns([
     pl.Series(col_name, hd2_scaled[:, i]) 
-              for i, col_name in enumerate(["thal_ach", "old_peak"])
+    for i, col_name in enumerate(["thal_ach", "old_peak"])
     ])
 
 # Section 3.3: Machine Learning Model
@@ -412,7 +415,7 @@ pl.DataFrame({
 # Section 4.1: Data Preprocessing
 
 # Load the data from the CSV file, filter, and modify values of existing columns
-wp1 = (
+wp = (
     pl.read_csv("Worker-Productivity-Data.csv", infer_schema_length = 850)
       .filter(pl.col("targeted_productivity").is_between(0.2, 0.8) & 
               (pl.col("over_time") < 11_000) & 
@@ -437,6 +440,40 @@ wp1 = (
       # Drop the columns
       .drop("date", "day", "wip")    
     )
- 
+
 # Section 4.2: Exploratory Data Analysis
+
+# Plot the distributions of the variables using histograms
+plt.hist(wp.select(pl.col("actual_productivity"))); plt.show() 
+plt.hist(wp.select(pl.col("actual_productivity").log())); plt.show()
+
+# Create dummy variables and rename a column 
+wp1 = (
+    wp.to_dummies(columns = ["quarter", "department", "team"], 
+                  drop_first = True)
+      .rename({"department_Finishing": "department_finishing"})
+      # Create a new column and drop a column 
+      .with_columns(
+          pl.col("actual_productivity").log().alias("log_actual_productivity")
+          )
+      .drop("actual_productivity")
+    )
+
+# Standardize the numeric variables
+wp1_num = wp1.select("targeted_productivity", "smv", "over_time", "incentive", 
+                     "idle_time", "idle_men", "no_of_style_change", 
+                     "no_of_workers")
+wp1_scaled = StandardScaler().fit_transform(wp1_num)
+wp1 = wp1.with_columns([
+    pl.Series(col_name, wp1_scaled[:, i]) 
+    for i, col_name in enumerate(wp1_num.columns)
+    ])
+
 # Section 4.3: Machine Learning Model
+
+# Perform a train-test split
+wp1_x_train, wp1_x_test, wp1_y_train, wp1_y_test = train_test_split(
+    wp1.drop("log_actual_productivity"), 
+    wp1.select("log_actual_productivity").to_series(), 
+    test_size = 0.2, random_state = 123
+    )
