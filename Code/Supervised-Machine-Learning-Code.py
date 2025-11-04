@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: November 2, 2025
+# Date: November 3, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -372,13 +372,6 @@ hd2 = (
                 "thal_7.0": "thal_7"})
     )
 
-# Standardize the numeric variables
-hd2_scaled = StandardScaler().fit_transform(hd2.select("thal_ach", "old_peak"))
-hd2 = hd2.with_columns([
-    pl.Series(col_name, hd2_scaled[:, i]) 
-    for i, col_name in enumerate(["thal_ach", "old_peak"])
-    ])
-
 # Section 3.3: Machine Learning Model
 
 # Perform a train-test split
@@ -387,8 +380,25 @@ hd2_x_train, hd2_x_test, hd2_y_train, hd2_y_test = train_test_split(
     test_size = 0.2, random_state = 123
     )
 
+# Standardize the numeric variables
+hd2_scaler = StandardScaler()
+hd2_x_train_scaled = hd2_scaler.fit_transform(hd2_x_train.select("thal_ach", 
+                                                                 "old_peak"))
+hd2_x_train = hd2_x_train.with_columns([
+    pl.Series(col_name, hd2_x_train_scaled[:, i]) 
+    for i, col_name in enumerate(["thal_ach", "old_peak"])
+    ])
+
 # Fit the model to the training data
 hd2_logit_fit = LogisticRegression().fit(hd2_x_train, hd2_y_train)
+
+# Standardize the numeric variables
+hd2_x_test_scaled = hd2_scaler.transform(hd2_x_test.select("thal_ach", 
+                                                           "old_peak"))
+hd2_x_test = hd2_x_test.with_columns([
+    pl.Series(col_name, hd2_x_test_scaled[:, i]) 
+    for i, col_name in enumerate(["thal_ach", "old_peak"])
+    ])
 
 # Get predictions of the model on the test data
 hd2_pred = hd2_logit_fit.predict(hd2_x_test)
@@ -459,15 +469,7 @@ wp1 = (
       .drop("actual_productivity")
     )
 
-# Standardize the numeric variables
-wp1_num = wp1.select("targeted_productivity", "smv", "over_time", "incentive", 
-                     "idle_time", "idle_men", "no_of_style_change", 
-                     "no_of_workers")
-wp1_scaled = StandardScaler().fit_transform(wp1_num)
-wp1 = wp1.with_columns([
-    pl.Series(col_name, wp1_scaled[:, i]) 
-    for i, col_name in enumerate(wp1_num.columns)
-    ])
+
 
 # Section 4.3: Machine Learning Model
 
@@ -477,3 +479,55 @@ wp1_x_train, wp1_x_test, wp1_y_train, wp1_y_test = train_test_split(
     wp1.select("log_actual_productivity").to_series(), 
     test_size = 0.2, random_state = 123
     )
+
+# Standardize the numeric variables
+wp1_scaler = StandardScaler()
+wp1_x_train_num = wp1_x_train.select("targeted_productivity", "smv", 
+                                     "over_time", "incentive", "idle_time", 
+                                     "idle_men", "no_of_style_change", 
+                                     "no_of_workers")
+wp1_x_train_scaled = wp1_scaler.fit_transform(wp1_x_train_num)
+wp1_x_train = wp1_x_train.with_columns([
+    pl.Series(col_name, wp1_x_train_scaled[:, i]) 
+    for i, col_name in enumerate(wp1_x_train_num.columns)
+    ])
+
+# Tune hyperparameters with cross-validation to find the best hyperparameters
+wp1_best_hp = GridSearchCV(
+    estimator = Lasso(max_iter = 10_000),
+    param_grid = {"alpha": [0.0005, 0.001, 0.005]},
+    scoring = "neg_root_mean_squared_error",
+    cv = KFold(n_splits = 5, shuffle = True, random_state = 123)   
+    ).fit(wp1_x_train, wp1_y_train).best_params_
+
+# Fit the model to the training data
+wp1_lasso_fit = Lasso(
+    alpha = wp1_best_hp["alpha"],
+    max_iter = 10_000
+    ).fit(wp1_x_train, wp1_y_train)
+
+# Standardize the numeric variables
+wp1_x_test_num = wp1_x_test.select("targeted_productivity", "smv", "over_time", 
+                                   "incentive", "idle_time", "idle_men", 
+                                   "no_of_style_change", "no_of_workers")
+wp1_x_test_scaled = wp1_scaler.transform(wp1_x_test_num)
+wp1_x_test = wp1_x_test.with_columns([
+    pl.Series(col_name, wp1_x_test_scaled[:, i]) 
+    for i, col_name in enumerate(wp1_x_test_num.columns)
+    ])
+
+# Create a DataFrame containing the performance and error metrics
+pl.DataFrame({
+    "Model": "Lasso Regression",
+    "R\u00b2": format(wp1_lasso_fit.score(wp1_x_test, wp1_y_test), ".3f"),
+    "RMSE": format(root_mean_squared_error(
+        wp1_y_test.exp(),
+        pl.Series(wp1_lasso_fit.predict(wp1_x_test)).exp() *
+        (wp1_y_train - wp1_lasso_fit.predict(wp1_x_train)).exp().mean()
+        ), ",.2f"),
+    "MAE": format(mean_absolute_error(
+        wp1_y_test.exp(),
+        pl.Series(wp1_lasso_fit.predict(wp1_x_test)).exp() *
+        (wp1_y_train - wp1_lasso_fit.predict(wp1_x_train)).exp().mean()
+        ), ",.2f") 
+    })
