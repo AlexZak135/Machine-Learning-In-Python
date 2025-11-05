@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: November 3, 2025
+# Date: November 4, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -457,26 +457,19 @@ wp = (
 plt.hist(wp.select(pl.col("actual_productivity"))); plt.show() 
 plt.hist(wp.select(pl.col("actual_productivity").log())); plt.show()
 
-# Create dummy variables and rename a column 
+# Create dummy variables and rename a column
 wp1 = (
     wp.to_dummies(columns = ["quarter", "department", "team"], 
                   drop_first = True)
       .rename({"department_Finishing": "department_finishing"})
-      # Create a new column and drop a column 
-      .with_columns(
-          pl.col("actual_productivity").log().alias("log_actual_productivity")
-          )
-      .drop("actual_productivity")
     )
-
-
 
 # Section 4.3: Machine Learning Model
 
 # Perform a train-test split
 wp1_x_train, wp1_x_test, wp1_y_train, wp1_y_test = train_test_split(
-    wp1.drop("log_actual_productivity"), 
-    wp1.select("log_actual_productivity").to_series(), 
+    wp1.drop("actual_productivity"), 
+    wp1.select("actual_productivity").to_series(), 
     test_size = 0.2, random_state = 123
     )
 
@@ -521,13 +514,9 @@ pl.DataFrame({
     "Model": "Lasso Regression",
     "R\u00b2": format(wp1_lasso_fit.score(wp1_x_test, wp1_y_test), ".3f"),
     "RMSE": format(root_mean_squared_error(
-        wp1_y_test.exp(),
-        pl.Series(wp1_lasso_fit.predict(wp1_x_test)).exp() *
-        (wp1_y_train - wp1_lasso_fit.predict(wp1_x_train)).exp().mean()
+        wp1_y_test, wp1_lasso_fit.predict(wp1_x_test)
         ), ",.2f"),
     "MAE": format(mean_absolute_error(
-        wp1_y_test.exp(),
-        pl.Series(wp1_lasso_fit.predict(wp1_x_test)).exp() *
-        (wp1_y_train - wp1_lasso_fit.predict(wp1_x_train)).exp().mean()
+        wp1_y_test, wp1_lasso_fit.predict(wp1_x_test) 
         ), ",.2f") 
     })
