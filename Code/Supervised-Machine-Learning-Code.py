@@ -1,6 +1,6 @@
 # Title: Supervised Machine Learning Module
 # Author: Alexander Zakrzeski
-# Date: November 4, 2025
+# Date: November 5, 2025
 
 # Load to import, clean, and wrangle data
 import os
@@ -17,6 +17,7 @@ from scipy.stats import chi2_contingency
 from statsmodels.formula.api import ols
 
 # Load to train, test, and evaluate machine learning models
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import Lasso, LinearRegression, LogisticRegression
 from sklearn.metrics import (accuracy_score, confusion_matrix, 
                              ConfusionMatrixDisplay, f1_score, 
@@ -518,5 +519,61 @@ pl.DataFrame({
         ), ",.2f"),
     "MAE": format(mean_absolute_error(
         wp1_y_test, wp1_lasso_fit.predict(wp1_x_test) 
+        ), ",.2f") 
+    })
+
+# Part 5: Random Forest
+
+# Section 5.1: Data Preprocessing
+
+# An existing DataFrame already includes all of the preprocessing steps
+
+# Section 5.2: Exploratory Data Analysis
+
+# Create dummy variables, drop a column, and rename a column
+wp2 = (
+    wp.to_dummies(columns = ["quarter", "department", "team"])
+      .drop("department_Sewing")
+      .rename({"department_Finishing": "department_finishing"})
+    )
+
+# Section 5.3: Machine Learning Model
+
+# Perform a train-test split
+wp2_x_train, wp2_x_test, wp2_y_train, wp2_y_test = train_test_split(
+    wp2.drop("actual_productivity"), 
+    wp2.select("actual_productivity").to_series(), 
+    test_size = 0.2, random_state = 123
+    )
+
+# Tune hyperparameters with cross-validation to find the best hyperparameters
+wp2_best_hp = GridSearchCV(
+    estimator = RandomForestRegressor(random_state = 123), 
+    param_grid = {"n_estimators": [500],
+                  "max_depth": [14, 15, 16],
+                  "min_samples_split": [12, 13, 14], 
+                  "min_samples_leaf": [2, 3, 4]},
+    scoring = "neg_root_mean_squared_error",
+    cv = KFold(n_splits = 5, shuffle = True, random_state = 123)  
+    ).fit(wp2_x_train, wp2_y_train).best_params_
+
+# Fit the model to the training data
+wp2_rf_fit = RandomForestRegressor(  
+    n_estimators = wp2_best_hp["n_estimators"],
+    max_depth = wp2_best_hp["max_depth"],
+    min_samples_split = wp2_best_hp["min_samples_split"],
+    min_samples_leaf = wp2_best_hp["min_samples_leaf"], 
+    random_state = 123
+    ).fit(wp2_x_train, wp2_y_train)
+
+# Create a DataFrame containing the performance and error metrics
+pl.DataFrame({
+    "Model": "Random Forest",
+    "R\u00b2": format(wp2_rf_fit.score(wp2_x_test, wp2_y_test), ".3f"),
+    "RMSE": format(root_mean_squared_error(
+        wp2_y_test, wp2_rf_fit.predict(wp2_x_test)
+        ), ",.2f"),
+    "MAE": format(mean_absolute_error(
+        wp2_y_test, wp2_rf_fit.predict(wp2_x_test) 
         ), ",.2f") 
     })
