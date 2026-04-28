@@ -16,9 +16,6 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
 
-# Set the working directory
-os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
-
 # Part 1: K-Means
 
 # Section 1.1: Data Preprocessing
