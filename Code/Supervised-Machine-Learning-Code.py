@@ -27,9 +27,6 @@ from sklearn.model_selection import GridSearchCV, KFold, train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
-# Set the working directory
-os.chdir("/Users/atz5/Desktop/Machine-Learning-In-Python/Data")
-
 # Part 1: K-Nearest Neighbors
 
 # Section 1.1: Data Preprocessing
